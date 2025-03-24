@@ -1,0 +1,15 @@
+langchain
+langchain-core
+langchain-groq
+langchain-google-genai
+langgraph
+faiss-cpu
+python-dotenv
+pypdf
+unstructured
+sentence-transformers
+tiktoken
+chromadb
+pydantic
+typing-extensions
+python-docx
