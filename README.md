@@ -1,118 +1,94 @@
-# RAG Q&A System
+# Ministry Regulation Q&A System (Arabic Language)
 
-A robust Question Answering system built using RAG (Retrieval Augmented Generation) with LangGraph and LangChain. This system implements a sophisticated workflow for processing queries, retrieving relevant information, and generating accurate answers.
+A sophisticated Retrieval-Augmented Generation (RAG) system designed to provide accurate and accessible information about Ministry regulations through an Arabic-language chatbot interface. This is a proprietary system developed for exclusive use by the Ministry.
 
-## Features
+## Project Overview
 
-- **Modular Architecture**: Built with SOLID principles and clean architecture
-- **LangGraph Workflow**: Orchestrates the RAG process using LangGraph
-- **Advanced Components**:
-  - Query Analysis
-  - Document Retrieval with FAISS
-  - Document Grading
-  - Answer Generation
-- **Configurable**: Easy configuration through YAML files
-- **Production-Ready**: Includes logging, error handling, and API endpoints
-- **Modern Stack**:
-  - LangChain for LLM operations
-  - LangGraph for workflow management
-  - FAISS for efficient document retrieval
-  - HuggingFace embeddings
-  - FastAPI for the REST API
+This system implements an intelligent question-answering platform that processes and understands official ministry regulation documents using advanced RAG techniques. Users can interact with the system in Arabic through a user-friendly chatbot interface, receiving accurate, contextually grounded responses based on official documentation.
+
+### Key Features
+
+- Arabic language support with right-to-left (RTL) interface
+- Intelligent document processing and indexing
+- Advanced RAG pipeline for accurate information retrieval
+- User-friendly chatbot interface
+- Grounded responses based on official ministry regulations
+- Scalable and maintainable architecture
+- Secure and private deployment environment
 
 ## Architecture
 
-The system follows a modular architecture with clear separation of concerns:
+The system implements a sophisticated RAG pipeline with the following components:
 
-```
-project_root/
-│
-├── src/
-│   ├── core/           # Core configuration and utilities
-│   ├── nodes/          # Individual processing nodes
-│   ├── graph/          # LangGraph workflow definition
-│   └── pipeline/       # Main pipeline orchestration
-│
-├── knowledge_base/     # Document storage and processing
-├── config/            # Configuration files
-└── tests/             # Test suite
-```
+1. **Document Processing**
+   - Arabic text processing and normalization
+   - Secure document ingestion and indexing
+   - Vector store management for efficient retrieval
+   - Ministry-specific document validation
 
-## Setup
+2. **RAG Pipeline**
+   - Query Analysis: Processes Arabic queries for optimal retrieval
+   - Document Retrieval: Fetches relevant documents from the vector store
+   - Document Grading: Ranks and filters retrieved documents
+   - Answer Generation: Generates responses in Arabic
+   - Self-Reflection: Validates generated answers for accuracy and relevance
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd ministry_rag_q-a
-```
+3. **User Interface**
+   - Arabic chatbot interface
+   - RTL layout support
+   - Responsive design for various devices
+   - Ministry-specific access controls
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+## Project Structure
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your API keys and configuration
-```
-
-5. Prepare the knowledge base:
-```bash
-# Add your documents to knowledge_base/raw_data/documents/
-python knowledge_base/scripts/ingest_data.py
-python knowledge_base/scripts/build_index.py
+```text
+src/
+├── nodes/              # LangGraph nodes
+│   ├── query_analyzer.py
+│   ├── retriever.py
+│   ├── grader.py
+│   ├── generator.py
+│   └── arabic_processor.py
+├── pipeline/           # RAG pipeline 
+│   └── rag_pipeline.py
+├── graph/              # Graph assembly
+│   └── rag_graph.py
+├── utils/              # Utility functions
+├── config/             # Configuration
+│   └── settings.py
+└── types/              # Type definitions
+    └── state.py
 ```
 
-## Usage
+## Project Timeline
 
-1. Start the API server:
-```bash
-python main.py
-```
+- Initial Prototype: April 16, 2024
+- Focus: Ministry regulation documents from 2024
+- Target Users: Ministry staff, students, teachers, and authorized personnel
 
-2. Send queries to the API:
-```bash
-curl -X POST "http://localhost:8000/query" \
-     -H "Content-Type: application/json" \
-     -d '{"query": "Your question here"}'
-```
+## Project Team
 
-## Configuration
+- Course: Group Project
+- Teacher: Abdelhakim Cheriet
+- Student Group: Group 4
+- Team Leader: Ainouche Abderahmane
+- Team Members:
+  - Moulahcene Riadh
+  - Zamoum Abdelhakim
+  - Guerroudj Abdennour
+  - Mestouri Oussama
+- Organization: Algerian Ministry of Education
 
-The system can be configured through YAML files in the `config/` directory:
+## Future Enhancements
 
-- `llm_config.yaml`: LLM settings
-- `retriever_config.yaml`: Document retrieval settings
+- Integration with additional ministry platforms
+- Expansion to cover historical regulations
+- Enhanced user experience features
+- Performance optimizations
+- Additional language support
+- Advanced security features
+- Ministry-specific analytics and reporting
 
-## Development
+## Confidentiality Notice
 
-### Running Tests
-```bash
-pytest tests/
-```
-
-### Code Style
-The project follows PEP 8 guidelines. Format code using:
-```bash
-black .
-isort .
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is proprietary and confidential. All rights reserved. Unauthorized copying, modification, distribution, or use of this project, via any medium, is strictly prohibited. Written permission must be obtained from the Ministry before any use or distribution of this system.
