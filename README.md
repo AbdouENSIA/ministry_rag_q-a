@@ -1,33 +1,118 @@
-# ministry_rag_q-a
+# RAG Q&A System
 
-An advanced Arabic Q&A system using Retrieval-Augmented Generation (RAG) to provide accurate answers from ministry regulations. It features a robust backend for document processing and a user-friendly chatbot interface, designed to make official information accessible to students, teachers, and the general public.
-
-## Description
-
-`ministry_rag_q-a` is a cutting-edge Question and Answer (Q&A) system tailored for Arabic speakers. It leverages Retrieval-Augmented Generation (RAG), a sophisticated technique that combines information retrieval with natural language generation, to deliver precise and contextually relevant answers based on official ministry regulations. The system is built with two core components:
-
-- **Backend Document Processing**: Efficiently processes and indexes a large collection of ministry documents, enabling fast and accurate retrieval of information.
-- **User-Friendly Chatbot**: Offers an intuitive interface where users can ask questions in natural language and receive clear, reliable responses.
-
-The project’s primary goal is to simplify access to complex regulatory information, bridging the gap between official documents and everyday users, particularly in educational communities and the broader public.
+A robust Question Answering system built using RAG (Retrieval Augmented Generation) with LangGraph and LangChain. This system implements a sophisticated workflow for processing queries, retrieving relevant information, and generating accurate answers.
 
 ## Features
 
-- **Arabic Language Support**: Optimized for Arabic speakers, ensuring a seamless and natural user experience.
-- **Retrieval-Augmented Generation (RAG)**: Integrates retrieval and generation technologies for highly accurate and context-aware answers.
-- **Efficient Document Processing**: Manages and indexes ministry regulations to provide quick and reliable responses.
-- **Intuitive Chatbot Interface**: Designed for ease of use, making it accessible to users regardless of technical background.
-- **Educational and Public Focus**: Targets students, teachers, and the general public, promoting widespread access to official information.
+- **Modular Architecture**: Built with SOLID principles and clean architecture
+- **LangGraph Workflow**: Orchestrates the RAG process using LangGraph
+- **Advanced Components**:
+  - Query Analysis
+  - Document Retrieval with FAISS
+  - Document Grading
+  - Answer Generation
+- **Configurable**: Easy configuration through YAML files
+- **Production-Ready**: Includes logging, error handling, and API endpoints
+- **Modern Stack**:
+  - LangChain for LLM operations
+  - LangGraph for workflow management
+  - FAISS for efficient document retrieval
+  - HuggingFace embeddings
+  - FastAPI for the REST API
+
+## Architecture
+
+The system follows a modular architecture with clear separation of concerns:
+
+```
+project_root/
+│
+├── src/
+│   ├── core/           # Core configuration and utilities
+│   ├── nodes/          # Individual processing nodes
+│   ├── graph/          # LangGraph workflow definition
+│   └── pipeline/       # Main pipeline orchestration
+│
+├── knowledge_base/     # Document storage and processing
+├── config/            # Configuration files
+└── tests/             # Test suite
+```
+
+## Setup
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd ministry_rag_q-a
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your API keys and configuration
+```
+
+5. Prepare the knowledge base:
+```bash
+# Add your documents to knowledge_base/raw_data/documents/
+python knowledge_base/scripts/ingest_data.py
+python knowledge_base/scripts/build_index.py
+```
 
 ## Usage
 
-Users can interact with the system through a web-based chatbot interface. By entering questions in natural language, they receive accurate answers sourced directly from ministry regulations. The system is designed to be straightforward and requires no specialized knowledge to use.
+1. Start the API server:
+```bash
+python main.py
+```
+
+2. Send queries to the API:
+```bash
+curl -X POST "http://localhost:8000/query" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "Your question here"}'
+```
+
+## Configuration
+
+The system can be configured through YAML files in the `config/` directory:
+
+- `llm_config.yaml`: LLM settings
+- `retriever_config.yaml`: Document retrieval settings
+
+## Development
+
+### Running Tests
+```bash
+pytest tests/
+```
+
+### Code Style
+The project follows PEP 8 guidelines. Format code using:
+```bash
+black .
+isort .
+```
 
 ## Contributing
 
-We welcome contributions to enhance `ministry_rag_q-a`! To get involved, you can:
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-- Report issues or suggest new features via the [GitHub Issues](https://github.com/AbdouENSIA/ministry_rag_q-a/issues) page.
-- Submit pull requests with improvements, bug fixes, or additional features.
+## License
 
-Please ensure your contributions align with the project’s objectives and adhere to standard coding practices
+This project is licensed under the MIT License - see the LICENSE file for details.
