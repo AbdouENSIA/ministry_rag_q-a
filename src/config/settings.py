@@ -1,5 +1,6 @@
 from pydantic import BaseSettings, Field
 
+
 class RAGSettings(BaseSettings):
     """Configuration settings for the RAG system."""
     

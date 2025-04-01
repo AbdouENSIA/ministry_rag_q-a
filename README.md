@@ -1,94 +1,154 @@
 # Ministry Regulation Q&A System (Arabic Language)
 
-A sophisticated Retrieval-Augmented Generation (RAG) system designed to provide accurate and accessible information about Ministry regulations through an Arabic-language chatbot interface. This is a proprietary system developed for exclusive use by the Ministry.
+A sophisticated Retrieval-Augmented Generation (RAG) system designed to provide accurate and accessible information about Ministry regulations through an Arabic-language chatbot interface.
 
-## Project Overview
+## Features
 
-This system implements an intelligent question-answering platform that processes and understands official ministry regulation documents using advanced RAG techniques. Users can interact with the system in Arabic through a user-friendly chatbot interface, receiving accurate, contextually grounded responses based on official documentation.
-
-### Key Features
-
-- Arabic language support with right-to-left (RTL) interface
-- Intelligent document processing and indexing
-- Advanced RAG pipeline for accurate information retrieval
-- User-friendly chatbot interface
-- Grounded responses based on official ministry regulations
-- Scalable and maintainable architecture
-- Secure and private deployment environment
+- **Adaptive RAG Pipeline**: Intelligent document retrieval and answer generation based on query type
+- **Multi-Strategy Retrieval**: Dense, sparse, and hybrid retrieval methods
+- **Self-Reflection**: Answer validation and hallucination detection
+- **Web Search Integration**: Fallback to web search for queries outside the knowledge base
+- **Document Processing**: Efficient chunking and indexing of PDF documents
+- **Arabic Language Support**: Full support for Arabic text and RTL interface
 
 ## Architecture
 
 The system implements a sophisticated RAG pipeline with the following components:
 
-1. **Document Processing**
-   - Arabic text processing and normalization
-   - Secure document ingestion and indexing
-   - Vector store management for efficient retrieval
-   - Ministry-specific document validation
+1. **Query Analysis**
+   - Query type classification (factual, analytical, procedural)
+   - Entity extraction
+   - Intent recognition
+   - Index relevance assessment
 
-2. **RAG Pipeline**
-   - Query Analysis: Processes Arabic queries for optimal retrieval
-   - Document Retrieval: Fetches relevant documents from the vector store
-   - Document Grading: Ranks and filters retrieved documents
-   - Answer Generation: Generates responses in Arabic
-   - Self-Reflection: Validates generated answers for accuracy and relevance
+2. **Document Retrieval**
+   - Dense retrieval using embeddings
+   - Sparse retrieval using keyword matching
+   - Hybrid retrieval combining both approaches
+   - Query rewriting for better matches
 
-3. **User Interface**
-   - Arabic chatbot interface
-   - RTL layout support
-   - Responsive design for various devices
-   - Ministry-specific access controls
+3. **Document Grading**
+   - Relevance scoring
+   - Quality assessment
+   - Evidence extraction
+   - Metadata enrichment
+
+4. **Answer Generation**
+   - Context-aware response generation
+   - Evidence integration
+   - Self-reflection and validation
+   - Confidence scoring
+
+5. **Web Search Integration**
+   - Automatic fallback for out-of-domain queries
+   - Result analysis and filtering
+   - Integration with generated answers
 
 ## Project Structure
 
 ```text
-src/
-├── nodes/              # LangGraph nodes
-│   ├── query_analyzer.py
-│   ├── retriever.py
-│   ├── grader.py
-│   ├── generator.py
-│   └── arabic_processor.py
-├── pipeline/           # RAG pipeline 
-│   └── rag_pipeline.py
-├── graph/              # Graph assembly
-│   └── rag_graph.py
-├── utils/              # Utility functions
-├── config/             # Configuration
-│   └── settings.py
-└── types/              # Type definitions
-    └── state.py
+.
+├── src/
+│   ├── nodes/              # Pipeline nodes
+│   │   ├── query_analyzer.py
+│   │   ├── retriever.py
+│   │   ├── grader.py
+│   │   ├── generator.py
+│   │   └── web_searcher.py
+│   ├── pipeline/           # Pipeline orchestration
+│   │   └── rag_pipeline.py
+│   ├── graph/              # Workflow graph
+│   │   └── rag_graph.py
+│   └── state/             # State management
+│       └── rag_state.py
+├── knowledge_base/        # Document storage
+│   ├── raw_data/         # Original documents
+│   ├── processed_data/   # Processed chunks
+│   └── scripts/          # Processing scripts
+├── tests/                # Unit tests
+├── config/              # Configuration files
+├── main.py             # Main entry point
+└── requirements.txt    # Dependencies
 ```
 
-## Project Timeline
+## Setup
 
-- Initial Prototype: April 16, 2024
-- Focus: Ministry regulation documents from 2024
-- Target Users: Ministry staff, students, teachers, and authorized personnel
+1. Clone the repository:
 
-## Project Team
+   ```bash
+   git clone https://github.com/yourusername/ministry-rag-qa.git
+   cd ministry-rag-qa
+   ```
 
-- Course: Group Project
-- Teacher: Abdelhakim Cheriet
-- Student Group: Group 4
-- Team Leader: Ainouche Abderahmane
-- Team Members:
-  - Moulahcene Riadh
-  - Zamoum Abdelhakim
-  - Guerroudj Abdennour
-  - Mestouri Oussama
-- Organization: Algerian Ministry of Education
+2. Create a virtual environment:
 
-## Future Enhancements
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   venv\Scripts\activate     # Windows
+   ```
 
-- Integration with additional ministry platforms
-- Expansion to cover historical regulations
-- Enhanced user experience features
-- Performance optimizations
-- Additional language support
-- Advanced security features
-- Ministry-specific analytics and reporting
+3. Install dependencies:
 
-## Confidentiality Notice
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-This project is proprietary and confidential. All rights reserved. Unauthorized copying, modification, distribution, or use of this project, via any medium, is strictly prohibited. Written permission must be obtained from the Ministry before any use or distribution of this system.
+4. Set up environment variables:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+5. Process documents:
+
+   ```bash
+   python knowledge_base/scripts/process_documents.py
+   ```
+
+## Usage
+
+1. Start the system:
+
+   ```bash
+   python main.py
+   ```
+
+2. Enter your questions when prompted. The system will:
+   - Analyze your query
+   - Retrieve relevant documents
+   - Generate and validate answers
+   - Provide confidence scores and supporting evidence
+
+3. Type 'exit' to quit the system.
+
+## Configuration
+
+Key configuration options in `config/settings.py`:
+
+- `MAX_RETRIEVAL_ATTEMPTS`: Maximum retrieval retry attempts (default: 3)
+- `MAX_GENERATION_ATTEMPTS`: Maximum answer generation attempts (default: 2)
+- `MIN_CONFIDENCE_SCORE`: Minimum confidence threshold (default: 0.7)
+- `CHUNK_SIZE`: Document chunk size
+- `CHUNK_OVERLAP`: Chunk overlap size
+
+## Testing
+
+Run the test suite:
+
+```bash
+pytest tests/
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## License
+
+This project is proprietary and confidential. All rights reserved.

@@ -1,14 +1,22 @@
-from typing import Dict, Any, Optional, TypeVar, cast
-from langgraph.graph import StateGraph, END
+import logging
+import time
+from typing import Any, Dict, Optional, TypeVar, cast
+
+from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
+from langgraph.graph import END, StateGraph
 
+from ..nodes.generator import Generator
+from ..nodes.grader import Grader
 from ..nodes.query_analyzer import QueryAnalyzer
 from ..nodes.retriever import Retriever
-from ..nodes.grader import Grader
-from ..nodes.generator import Generator
 from ..nodes.web_searcher import WebSearcher
-from ..types.state import RAGState
+from ..state.rag_state import RAGState
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Type for the state
 State = TypeVar("State", bound=RAGState)
@@ -20,48 +28,89 @@ class RAGGraph:
         self,
         vector_store: VectorStore,
         llm: BaseChatModel,
-        config: Optional[Dict[str, Any]] = None
+        embeddings: Embeddings,
+        config: Optional[Dict[str, Any]] = None,
+        rate_limiter: Optional[Any] = None
     ):
+        logger.info("="*50)
+        logger.info("Initializing RAGGraph...")
+        logger.info(f"Config: {config}")
+        
         self.vector_store = vector_store
         self.llm = llm
+        self.embeddings = embeddings
         self.config = config or {}
+        self.rate_limiter = rate_limiter
+        self.workflow = None
+        self.compiled_graph = None
         
         # Initialize nodes
-        self.query_analyzer = QueryAnalyzer()
-        self.retriever = Retriever()
-        self.grader = Grader()
-        self.generator = Generator(llm=self.llm)
-        self.web_searcher = WebSearcher(search_tool=None)  # Configure search tool in implementation
+        logger.info("Initializing graph nodes...")
+        start_time = time.time()
         
-        # Configure retry limits
-        self.max_retrieval_attempts = config.get("max_retrieval_attempts", 3)
-        self.max_generation_attempts = config.get("max_generation_attempts", 2)
+        logger.info("Initializing QueryAnalyzer...")
+        self.query_analyzer = QueryAnalyzer(llm=self.llm, rate_limiter=self.rate_limiter)
         
-    def build(self) -> StateGraph:
+        logger.info("Initializing Retriever...")
+        self.retriever = Retriever(
+            vector_store=vector_store,
+            embeddings=self.embeddings,
+            llm=self.llm,
+            config=self.config,
+            rate_limiter=self.rate_limiter
+        )
+        
+        logger.info("Initializing Grader...")
+        self.grader = Grader(llm=self.llm, rate_limiter=self.rate_limiter)
+        
+        logger.info("Initializing Generator...")
+        self.generator = Generator(llm=self.llm, rate_limiter=self.rate_limiter)
+        
+        logger.info("Initializing WebSearcher...")
+        self.web_searcher = WebSearcher(llm=self.llm, config=self.config, rate_limiter=self.rate_limiter)
+        
+        # Configure retry limits - reduce max attempts
+        self.max_retrieval_attempts = min(config.get("max_retrieval_attempts", 2), 2)  # Cap at 2
+        self.max_generation_attempts = min(config.get("max_generation_attempts", 1), 1)  # Cap at 1
+        
+        init_time = time.time() - start_time
+        logger.info(f"All nodes initialized in {init_time:.2f} seconds")
+        logger.info(f"Max retrieval attempts: {self.max_retrieval_attempts}")
+        logger.info(f"Max generation attempts: {self.max_generation_attempts}")
+        logger.info("="*50)
+        
+    def build(self) -> 'RAGGraph':
         """
         Build the LangGraph workflow according to the architecture diagram.
         
         The workflow implements:
         1. Query Analysis with routing to either retrieval or web search
         2. RAG pipeline with document retrieval, grading, and generation
-        3. Self-reflection loops for hallucination detection and answer validation
+        3. Optimized flow with minimal retries
         
         Returns:
-            Configured StateGraph ready for execution
+            Self for method chaining
         """
+        logger.info("="*50)
+        logger.info("Building workflow graph...")
+        start_time = time.time()
+        
         # Create workflow graph with typed state
-        workflow = StateGraph(RAGState)
+        logger.info("Creating StateGraph instance...")
+        self.workflow = StateGraph(RAGState)
         
         # Add all nodes
-        workflow.add_node("query_analyzer", self.query_analyzer.analyze)
-        workflow.add_node("retriever", self.retriever.retrieve)
-        workflow.add_node("grader", self.grader.grade)
-        workflow.add_node("generator", self.generator.generate)
-        workflow.add_node("web_searcher", self.web_searcher.search)
-        workflow.add_node("rewrite_question", self._rewrite_question)
+        logger.info("Adding nodes to graph...")
+        self.workflow.add_node("query_analyzer", self.query_analyzer.analyze)
+        self.workflow.add_node("retriever", self.retriever.retrieve)
+        self.workflow.add_node("grader", self.grader.grade)
+        self.workflow.add_node("generator", self.generator.generate)
+        self.workflow.add_node("web_searcher", self.web_searcher.search)
+        logger.info("All nodes added successfully")
         
         # 1. Query Analysis Section
-        workflow.add_conditional_edges(
+        logger.info("Adding query analysis edges...")
+        self.workflow.add_conditional_edges(
             "query_analyzer",
             self.route_from_analysis,
             {
@@ -70,120 +119,121 @@ class RAGGraph:
             }
         )
         
-        # 2. Document Processing Path
-        # Check retrieval attempts first
-        workflow.add_conditional_edges(
+        # 2. Document Processing Path - Simplified
+        logger.info("Adding document processing edges...")
+        self.workflow.add_conditional_edges(
             "retriever",
             self.check_retrieval_attempts,
             {
                 "continue": "grader",
-                "end": END  # End if too many retrieval attempts
+                "end": END
             }
         )
         
-        # 3. Document Relevance Check ("Docs?")
-        workflow.add_conditional_edges(
+        # 3. Document Relevance Check - Direct to generator or end
+        logger.info("Adding document relevance check edges...")
+        self.workflow.add_conditional_edges(
             "grader",
             self.check_docs_relevance,
             {
                 "yes": "generator",  # Docs are relevant
-                "no": "rewrite_question"  # Docs not relevant, rewrite query
+                "no": END  # End if docs not relevant
             }
         )
         
-        # 4. Handle rewritten questions
-        workflow.add_edge("rewrite_question", "retriever")
+        # 4. Web search path
+        logger.info("Adding web search path edge...")
+        self.workflow.add_edge("web_searcher", "generator")
         
-        # 5. Web search path (optional)
-        workflow.add_edge("web_searcher", "generator")
-        
-        # 6. Generation and Self-Reflection
-        # First check for hallucinations
-        workflow.add_conditional_edges(
+        # 5. Generation - Direct to end
+        logger.info("Adding generation edges...")
+        self.workflow.add_conditional_edges(
             "generator",
-            self.check_hallucinations,
+            self.check_generation_quality,
             {
-                "yes": "retriever",  # Has hallucinations, retry retrieval
-                "no": "answer_quality"  # No hallucinations, check answer quality
-            }
-        )
-        
-        # 7. Answer Quality Check
-        workflow.add_node("answer_quality", self.check_answer_quality)
-        workflow.add_conditional_edges(
-            "answer_quality",
-            self.route_answer_quality,
-            {
-                "yes": END,  # Good answer, end
-                "no": "generator",  # Poor answer, regenerate
-                "end": END  # Too many attempts
+                "continue": END,  # Good quality, end
+                "retry": "retriever",  # Poor quality, one retry
+                "end": END  # Max attempts or other conditions
             }
         )
         
         # Set entry point
-        workflow.set_entry_point("query_analyzer")
+        logger.info("Setting entry point...")
+        self.workflow.set_entry_point("query_analyzer")
         
-        return workflow
+        build_time = time.time() - start_time
+        logger.info(f"Graph building completed in {build_time:.2f} seconds")
+        logger.info("="*50)
+        
+        return self
+
+    def compile(self) -> 'RAGGraph':
+        """Compile the graph for execution."""
+        if not self.workflow:
+            raise RuntimeError("Graph must be built before compilation")
+        if not self.compiled_graph:
+            logger.info("Compiling graph...")
+            self.compiled_graph = self.workflow.compile()
+            logger.info("Graph compiled successfully")
+        return self
+
+    async def execute(self, state: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Execute the graph with the given state and config."""
+        if not self.compiled_graph:
+            self.compile()
+        # Use ainvoke instead of invoke for async execution
+        return await self.compiled_graph.ainvoke(state, config=config or {})
     
     def route_from_analysis(self, state: State) -> str:
         """Route based on query analysis results."""
+        logger.info("Routing from analysis...")
         state = cast(RAGState, state)
         state["current_node"] = "query_analyzer"
         
         if state["is_related_to_index"]:
+            logger.info("Query related to index, routing to retrieval")
             return "retrieve"
-        elif self.web_searcher.search_tool:  # Only use web search if configured
+        elif self.web_searcher.search_client:  # Only use web search if configured
+            logger.info("Query unrelated to index, routing to web search")
             return "web_search"
         else:
+            logger.info("Web search not available, falling back to retrieval")
             return "retrieve"  # Fallback to retrieval if web search not available
     
     def check_retrieval_attempts(self, state: State) -> str:
         """Check if we should continue retrieving or end due to too many attempts."""
+        logger.info("Checking retrieval attempts...")
         state = cast(RAGState, state)
         if state["retry_count"] >= self.max_retrieval_attempts:
+            logger.info(f"Max retrieval attempts ({self.max_retrieval_attempts}) reached")
             return "end"
+        logger.info(f"Retrieval attempts ({state['retry_count']}) within limit")
         return "continue"
     
     def check_docs_relevance(self, state: State) -> str:
         """Check if retrieved documents are relevant."""
+        logger.info("Checking document relevance...")
         state = cast(RAGState, state)
         if state["docs_relevant"]:
+            logger.info("Documents found to be relevant")
             return "yes"
+        logger.info("Documents found to be irrelevant")
         return "no"
     
-    def check_hallucinations(self, state: State) -> str:
-        """Check if the generated answer contains hallucinations."""
-        state = cast(RAGState, state)
-        if state.get("has_hallucinations", False):
-            state["retry_count"] = state.get("retry_count", 0) + 1
-            return "yes"
-        return "no"
-    
-    async def check_answer_quality(self, state: State) -> State:
-        """Check if the answer sufficiently addresses the question."""
-        state = cast(RAGState, state)
-        # This would be implemented with actual quality checking logic
-        return state
-    
-    def route_answer_quality(self, state: State) -> str:
-        """Route based on answer quality check."""
+    def check_generation_quality(self, state: State) -> str:
+        """Combined quality check for generation results."""
         state = cast(RAGState, state)
         
         # Check for too many attempts first
         if state.get("retry_count", 0) >= self.max_generation_attempts:
+            logger.info(f"Max generation attempts ({self.max_generation_attempts}) reached")
             return "end"
             
-        # Check if answer addresses question
-        if state.get("answers_question", False):
-            return "yes"
-        
-        # Increment retry count and try again
-        state["retry_count"] = state.get("retry_count", 0) + 1
-        return "no"
-    
-    async def _rewrite_question(self, state: State) -> State:
-        """Rewrite the question for better retrieval."""
-        state = cast(RAGState, state)
-        # This would be implemented in the actual node
-        state["retry_count"] = state.get("retry_count", 0) + 1
-        return state 
+        # Check for hallucinations and answer quality together
+        if state.get("has_hallucinations", False) or not state.get("answers_question", True):
+            state["retry_count"] = state.get("retry_count", 0) + 1
+            logger.info(f"Quality check failed, retry count: {state['retry_count']}")
+            return "retry" if state["retry_count"] < self.max_generation_attempts else "end"
+            
+        logger.info("Generation quality check passed")
+        return "continue" 
