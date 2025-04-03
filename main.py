@@ -1,8 +1,8 @@
 import asyncio
+import json
 import logging
 import os
 import time
-import json
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -138,6 +138,7 @@ def format_answer(result: dict) -> str:
             if 'answer' in result and isinstance(result['answer'], str):
                 # Look for bold text or headers as likely key concepts
                 import re
+
                 # Look for markdown bold or headers
                 concepts = re.findall(r'\*\*(.*?)\*\*|#+\s+(.*?)$', result['answer'], re.MULTILINE)
                 if concepts:
@@ -362,7 +363,7 @@ async def main():
         with console.status("[cyan]Initializing system...", spinner="dots"):
             # Initialize components
             llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash",
+                model="gemini-2.0-flash-exp-image-generation",
                 temperature=0.3,
                 max_tokens=2048,
             )

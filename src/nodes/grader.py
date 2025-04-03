@@ -1,11 +1,11 @@
-from typing import Any, List, Optional
 import json
+from typing import Any, List, Optional
 
 from langchain_core.documents import Document
+from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.exceptions import OutputParserException
 
 from ..state.rag_state import RAGState
 
