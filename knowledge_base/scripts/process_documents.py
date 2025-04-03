@@ -20,8 +20,8 @@ class DocumentProcessor:
         raw_data_dir: str,
         processed_data_dir: str,
         embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200
+        chunk_size: int = 2500,
+        chunk_overlap: int = 750
     ):
         self.raw_data_dir = Path(raw_data_dir)
         self.processed_data_dir = Path(processed_data_dir)

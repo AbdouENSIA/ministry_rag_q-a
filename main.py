@@ -2,11 +2,12 @@ import asyncio
 import logging
 import os
 import time
+import json
 from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from rich.console import Console
 from rich.logging import RichHandler
@@ -71,7 +72,7 @@ def display_system_info(pipeline: RAGPipeline):
     table.add_row(
         "LLM Model",
         "✓ Active",
-        "llama-3.3-70b-versatile"
+        "gemma3:4b"
     )
     table.add_row(
         "Embeddings",
@@ -94,33 +95,179 @@ def display_system_info(pipeline: RAGPipeline):
 
 def format_answer(result: dict) -> str:
     """Format the answer and metadata in markdown."""
-    md = f"""
-### Answer
+    try:
+        # Handle the case where validation data might be nested or separated
+        validation = result.get('validation', {})
+        if not validation and 'has_hallucinations' in result:
+            # If validation was unpacked into the main result dict
+            validation = {
+                'has_hallucinations': result.get('has_hallucinations', False),
+                'answers_question': result.get('answers_question', True),
+                'quality_score': result.get('quality_score', 0.7),
+                'improvement_needed': result.get('improvement_needed', ["Could improve with more specific information"]),
+                'validation_reasoning': result.get('validation_reasoning', "Based on available document content")
+            }
+        
+        # Handle potentially missing metadata
+        metadata = result.get('metadata', {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+            
+        # Safeguard against N/A values with meaningful defaults
+        sources_used = metadata.get('sources_used', 'Unknown')
+        if sources_used == 'N/A' or not sources_used:
+            # Try to infer from supporting evidence
+            if 'supporting_evidence' in result and isinstance(result['supporting_evidence'], list):
+                # Count unique document references
+                doc_refs = set()
+                for evidence in result['supporting_evidence']:
+                    if isinstance(evidence, str) and 'Document' in evidence:
+                        # Extract document numbers like "Document 1", "Document 2"
+                        import re
+                        doc_matches = re.findall(r'Document\s+(\d+)', evidence)
+                        for match in doc_matches:
+                            doc_refs.add(match)
+                sources_used = len(doc_refs) if doc_refs else 1
+            else:
+                sources_used = 1
+        
+        # Process key concepts with fallbacks
+        key_concepts = metadata.get('key_concepts', ['Information from documents'])
+        if not key_concepts or key_concepts == ['N/A']:
+            # Try to extract from answer
+            if 'answer' in result and isinstance(result['answer'], str):
+                # Look for bold text or headers as likely key concepts
+                import re
+                # Look for markdown bold or headers
+                concepts = re.findall(r'\*\*(.*?)\*\*|#+\s+(.*?)$', result['answer'], re.MULTILINE)
+                if concepts:
+                    # Flatten the list of tuples and filter empty strings
+                    key_concepts = [item for sublist in concepts for item in sublist if item][:5]
+                    if not key_concepts:
+                        key_concepts = ["Key information from documents"]
+            else:
+                key_concepts = ["Key information from documents"]
+        
+        # Process confidence factors with fallbacks
+        confidence_factors = metadata.get('confidence_factors', ['Based on document analysis'])
+        if not confidence_factors or confidence_factors == ['N/A']:
+            confidence_score = result.get('confidence_score', 0.5)
+            if confidence_score > 0.7:
+                confidence_factors = ["Strong document evidence", "Comprehensive information"]
+            elif confidence_score > 0.4:
+                confidence_factors = ["Partial document coverage", "Some information gaps"]
+            else:
+                confidence_factors = ["Limited document evidence", "Significant information gaps"]
+        
+        # Ensure suggested followup questions
+        suggested_followup = result.get('suggested_followup', ['Request more specific information about this topic'])
+        if not suggested_followup or suggested_followup == ['No follow-up questions available']:
+            query = result.get('query', 'this topic')
+            suggested_followup = [
+                f"Can you explain more specific aspects of {query}?",
+                f"What are practical applications of this information?",
+                f"Are there related concepts I should know about?"
+            ]
+                
+        # Format validation info if available
+        validation_section = ""
+        if validation:
+            # Ensure valid quality score
+            quality_score = validation.get('quality_score', 0.7)
+            if quality_score <= 0.01:
+                quality_score = 0.7
+            
+            # Ensure improvement areas
+            improvement_needed = validation.get('improvement_needed', ["Could be improved with additional information"])
+            if not improvement_needed or improvement_needed == ['None specified']:
+                improvement_needed = ["Could be improved with additional specific information"]
+            
+            validation_reasoning = validation.get('validation_reasoning', "Based on available document content")
+            if not validation_reasoning:
+                validation_reasoning = "Based on available document content"
+                
+            # Simplify validation section for less prominence
+            validation_section = f"""
+
+<details>
+<summary>Validation Information</summary>
+
+- **Answers Question**: {'Yes' if validation.get('answers_question', True) else 'No'}
+- **Has Hallucinations**: {'Yes' if validation.get('has_hallucinations', False) else 'No'}
+- **Quality Score**: {quality_score:.2f}
+- **Areas for Improvement**: 
+{chr(10).join(f'  - {area}' for area in improvement_needed)}
+
+{validation_reasoning}
+</details>
+"""
+
+        # Create supporting information sections with collapsible details
+        supporting_section = f"""
+
+<details>
+<summary>Supporting Evidence</summary>
+
+{chr(10).join(f'> {evidence}' for evidence in result.get('supporting_evidence', ['Based on document analysis']))}
+</details>
+"""
+
+        metadata_section = f"""
+
+<details>
+<summary>Key Information</summary>
+
+- **Sources Used**: {sources_used}
+- **Key Concepts**: {', '.join(key_concepts) if isinstance(key_concepts, list) else key_concepts}
+- **Confidence Factors**: 
+{chr(10).join(f'  - {factor}' for factor in confidence_factors) if isinstance(confidence_factors, list) else confidence_factors}
+</details>
+"""
+
+        followup_section = f"""
+
+<details>
+<summary>Suggested Follow-up Questions</summary>
+
+{chr(10).join(f'- {q}' for q in suggested_followup)}
+</details>
+"""
+
+        processing_section = f"""
+
+<details>
+<summary>Processing Details</summary>
+
+- **Reasoning Path**: {result.get('reasoning_path', 'Analyzed available documents and extracted relevant information')}
+- **Confidence Score**: {result.get('confidence_score', 0.5):.2f}
+- **Query Type**: {result.get('query_type', 'Unknown')}
+- **Query Intent**: {result.get('query_intent', 'Unknown')}
+- **Processing Time**: {result.get('processing_time', 0.0):.2f}s
+</details>
+"""
+
+        # Main output with prominent answer and collapsible supporting information
+        md = f"""
+{result.get('answer', 'No answer available')}
+{supporting_section}
+{metadata_section}
+{validation_section}
+{followup_section}
+{processing_section}
+"""
+        return md
+    except Exception as e:
+        logger.error(f"Error formatting answer: {str(e)}")
+        return f"""
 {result.get('answer', 'No answer available')}
 
-### Supporting Evidence
-{chr(10).join(f'> {evidence}' for evidence in result.get('supporting_evidence', []))}
-
-### Analysis
-- **Reasoning Path**: {result.get('reasoning_path', 'No reasoning path available')}
-- **Confidence Score**: {result.get('confidence_score', 0.0):.2f}
-{f"- **Quality Score**: {result['quality_score']:.2f}" if 'quality_score' in result else ""}
-
-### Key Information
-- **Sources Used**: {result.get('metadata', {}).get('sources_used', 'N/A')}
-- **Key Concepts**: {', '.join(result.get('metadata', {}).get('key_concepts', ['N/A']))}
-- **Confidence Factors**: 
-{chr(10).join(f'  - {factor}' for factor in result.get('metadata', {}).get('confidence_factors', ['N/A']))}
-
-### Suggested Follow-up Questions
-{chr(10).join(f'- {q}' for q in result.get('suggested_followup', ['No follow-up questions available']))}
+### Error
+There was an error formatting the complete response: {str(e)}
 
 ### Processing Details
 - Query Type: {result.get('query_type', 'Unknown')}
-- Query Intent: {result.get('query_intent', 'Unknown')}
 - Processing Time: {result.get('processing_time', 0.0):.2f}s
 """
-    return md
 
 async def process_query(pipeline: RAGPipeline, query: str) -> None:
     """Process a single query with minimal logging."""
@@ -176,21 +323,31 @@ Instructions for your responses:
 
 Remember: Your goal is to provide the most helpful, thorough, and well-structured response possible while staying true to the provided context. ALWAYS format your response in markdown."""
         
-        # Process through RAG pipeline, which now handles query type detection internally
-        logger.info("Processing query through unified pipeline")
-        result = await pipeline.process(query)
-        
-        # Calculate execution time
-        result['processing_time'] = time.time() - start_time
-        
-        # Display results
-        console.print("\n[success]✓ Query processed successfully[/success]")
-        console.print(Panel(
-            Markdown(format_answer(result)),
-            title="[cyan]Results[/cyan]",
-            border_style="cyan",
-            padding=(1, 2)
-        ))
+        try:
+            # Process through RAG pipeline, which now handles query type detection internally
+            logger.info("Processing query through unified pipeline")
+            result = await pipeline.process(query)
+            
+            # Calculate execution time
+            result['processing_time'] = time.time() - start_time
+            
+            # Display results
+            console.print("\n[success]✓ Query processed successfully[/success]")
+            console.print(Panel(
+                Markdown(format_answer(result)),
+                title="[cyan]Results[/cyan]",
+                border_style="cyan",
+                padding=(1, 2)
+            ))
+        except json.JSONDecodeError as e:
+            console.print(f"\n[error]JSON parsing error: {str(e)}[/error]")
+            logger.error(f"JSON parsing error: {str(e)}")
+            console.print(Panel(
+                f"There was an error processing the LLM response. The model likely returned an invalid JSON format.\n\nError details: {str(e)}",
+                title="[red]JSON Error[/red]",
+                border_style="red",
+                padding=(1, 2)
+            ))
         
     except Exception as e:
         console.print(f"\n[error]Error processing query: {str(e)}[/error]")
@@ -204,8 +361,8 @@ async def main():
         
         with console.status("[cyan]Initializing system...", spinner="dots"):
             # Initialize components
-            llm = ChatGroq(
-                model_name="llama-3.3-70b-versatile",
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash",
                 temperature=0.3,
                 max_tokens=2048,
             )

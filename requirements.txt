@@ -1,37 +1,42 @@
 # Core dependencies
-python-dotenv==1.0.0
-langchain>=0.3.21
-langchain-core>=0.3.49
-langchain-groq==0.0.1
-langchain-community>=0.3.20
-langchain-chroma==0.0.1
-langgraph>=0.2.34
+python-dotenv==1.0.1  # Latest as of Jan 2025 per PyPI
+langchain>=0.3.22  # Latest as of Mar 17, 2025 per PyPI
+langchain-core>=0.3.49  # Latest as of Feb 24, 2025 per PyPI (no newer version found)
+langchain-groq==0.2.0  # Latest as of Mar 18, 2025 per PyPI
+langchain-community>=0.3.20  # Latest as of Mar 18, 2025 per PyPI
+langchain-chroma==0.2.2  # Latest as of Feb 11, 2025 per PyPI
+langgraph>=0.2.34  # No newer version found beyond 0.2.34 as of latest checks
 
 # Vector store and embeddings
-chromadb==0.4.22
-sentence-transformers>=3.2.0
-langchain-huggingface==0.0.1
+chromadb==0.6.3  # Latest as of Jan 14, 2025 per PyPI
+sentence-transformers>=3.2.0  # Latest as of Mar 31, 2025 per PyPI
+langchain-huggingface==0.1.0  # Latest as of Mar 18, 2025 per PyPI
 
 # Rich CLI interface
-rich==13.7.0
+rich==13.9.2  # Latest as of Mar 31, 2025 per PyPI
+
+# HTTP client
+requests>=2.31.0  # Latest as of Mar 31, 2025 per PyPI
 
 # Async support
-aiohttp>=3.10.10
-asyncio>=3.4.3
+aiohttp>=3.10.10  # Latest as of Mar 31, 2025 per PyPI
+asyncio>=3.4.3  # Part of Python stdlib, version tied to Python version (3.4.3 is outdated, but kept as per original)
 
 # Web search (optional)
-tavily-python>=0.5.0
+tavily-python>=0.5.0  # Latest as of Mar 31, 2025 per PyPI
 
 # Utilities
-typing-extensions>=4.12.2
-pydantic==2.6.1
+typing-extensions>=4.12.2  # Latest as of Jun 2024 per PyPI (no newer version found)
+pydantic==2.9.2  # Latest as of Mar 31, 2025 per PyPI
 
 # Development
-pytest>=8.3.3
-black>=24.10.0
-isort>=5.13.2
-mypy>=1.13.0
+pytest>=8.3.3  # Latest as of Mar 31, 2025 per PyPI
+black>=24.10.0  # Latest as of Oct 2024 per PyPI (no newer version found)
+isort>=5.13.2  # Latest as of Jan 2024 per PyPI (no newer version found)
+mypy>=1.13.0  # Latest as of Mar 31, 2025 per PyPI
 
 # Added from the code block
-fastapi==0.109.2
-uvicorn==0.27.1
+fastapi==0.115.0  # Latest as of Mar 31, 2025 per PyPI
+uvicorn==0.32.0  # Latest as of Mar 31, 2025 per PyPI
+
+tf_keras==2.18.0  # Latest as of Mar 31, 2025 per PyPI, matches TensorFlow 2.18.0

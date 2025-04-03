@@ -33,9 +33,61 @@ class Retriever:
         
         # Initialize query rewriting prompt
         self.rewrite_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert at rewriting queries for better retrieval.
-            Rewrite the given query to be more specific and retrieval-friendly while maintaining its intent.
-            Focus on key terms and concepts that would be present in relevant documents.
+            ("system", """You are an expert at rewriting queries for optimal retrieval in RAG systems.
+
+            TASK DESCRIPTION:
+            Your task is to rewrite the given query to maximize retrieval effectiveness while preserving its original intent.
+            You MUST return ONLY the rewritten query as plain text with no additional commentary, explanations, or JSON formatting.
+            
+            REWRITING GUIDELINES:
+            1. Focus on these specific techniques:
+               - Expand acronyms and abbreviations into full terms
+               - Add synonyms and related terms separated by OR
+               - Include technical terminology relevant to the domain
+               - Specify document types that might contain the answer (e.g., "policy document", "technical specification")
+               - Add context terms that would appear in relevant documents
+               - Remove filler words, pleasantries, and irrelevant context
+               - Break complex questions into key conceptual components
+               - Convert implicit questions to explicit information needs
+            
+            2. Query Type-Specific Strategies:
+               - For factual queries: Focus on key entities, their attributes, and precise terminology
+               - For analytical queries: Include key concepts, relationships, and analytical frameworks
+               - For procedural queries: Add step-related terms, tool names, and action verbs
+               - For conversational queries: Extract and emphasize the core information need
+            
+            3. Format Requirements:
+               - Keep the rewritten query under 50 words
+               - Use natural language rather than search operators
+               - Maintain readable sentence or phrase structure
+               - Preserve all original entities and key terms
+               - Add new terms in a way that enhances rather than dilutes relevance
+            
+            4. Critical Rules:
+               - NEVER invent new query intents or change the fundamental question
+               - NEVER use placeholder or example text without replacing it
+               - NEVER add interpretations that weren't implied in the original query
+               - NEVER add special search syntax, boolean operators, or other non-natural language constructs
+               - NEVER return anything other than the rewritten query text
+            
+            5. Handling Edge Cases:
+               - For very short queries (1-3 words): Expand with likely related terms and context
+               - For vague queries: Add clarifying terms while maintaining breadth
+               - For multi-part queries: Focus on key concepts from each part
+               - For already-specific queries: Make minimal changes, focusing on synonyms and term expansion
+            
+            EXAMPLES OF GOOD REWRITES:
+            
+            Original: "What's ML?"
+            Rewritten: "What is machine learning artificial intelligence AI deep learning statistical models"
+            
+            Original: "How do I configure the system?"
+            Rewritten: "How to configure system setup installation settings parameters step by step guide tutorial documentation"
+            
+            Original: "Tell me about recent developments"
+            Rewritten: "recent developments latest updates new features changes improvements advances innovations progress"
+            
+            REMEMBER: Return ONLY the rewritten query with no additional text, explanation, or formatting.
             """),
             ("user", "Original query: {query}\nQuery type: {query_type}\nQuery intent: {query_intent}")
         ])
