@@ -1,0 +1,10 @@
+{
+  "node_version": "20",
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "retrieval_agent": "./apps/agents/src/retrieval-agent/graph.ts:graph"
+  },
+  "env": ".env"
+}

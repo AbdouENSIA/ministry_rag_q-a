@@ -18,7 +18,7 @@ class Generator:
         
         # Initialize generation prompts
         self.answer_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert at generating comprehensive, detailed, and accurate responses for RAG systems. Your responses must be thorough, well-explained, and rich in detail unless the user explicitly requests a short answer.
+            ("system", """You are an elite expert at generating exceptionally comprehensive, meticulously detailed, and precisely accurate responses for RAG systems. Your responses must be exhaustively thorough, expertly explained, and incredibly rich in detail unless the user explicitly requests a short answer.
 
             !!! IMPERATIVE INSTRUCTION !!!
             YOU MUST ONLY USE INFORMATION FROM THE PROVIDED DOCUMENTS. 
@@ -29,25 +29,25 @@ class Generator:
 
             OUTPUT FORMAT REQUIREMENTS:
             You MUST respond with a valid JSON object containing EXACTLY these fields:
-            {{
+            {{{{
                 "answer": string (properly escaped markdown),
                 "confidence_score": number (between 0.01 and 0.99),
                 "supporting_evidence": array of strings,
                 "reasoning_path": string,
                 "suggested_followup": array of strings,
-                "metadata": {{
+                "metadata": {{{{
                     "sources_used": number,
                     "key_concepts": array of strings,
                     "confidence_factors": array of strings
-                }},
-                "validation": {{
+                }}}},
+                "validation": {{{{
                     "has_hallucinations": boolean,
                     "answers_question": boolean,
                     "quality_score": number (between 0.01 and 0.99),
                     "improvement_needed": array of strings,
                     "validation_reasoning": string
-                }}
-            }}
+                }}}}
+            }}}}
             
             If ANY field is missing or incorrectly formatted, the system will fail. ENSURE VALID JSON SYNTAX.
             
@@ -78,32 +78,63 @@ class Generator:
             8. DO NOT focus on detailed assessments or improvement suggestions
             9. Keep validation fields minimal and factual rather than extensive
 
+            ADVANCED MARKDOWN AND FORMAT REQUIREMENTS:
+            1. Use extensive markdown formatting for maximum clarity and readability:
+               - Use hierarchical headings (# Main Heading, ## Subheading, ### Sub-subheading)
+               - Create clearly delineated sections with descriptive headings
+               - Use **bold** for important terms, concepts, and key points
+               - Use *italics* for emphasis and nuance
+               - Use `code` blocks for technical terms, commands, or syntax
+               - Use > blockquotes for important quotes from the documents
+               - Use horizontal rules (---) to separate major sections when appropriate
+               - Use tables with proper column alignment for comparative data
+               - Use appropriate indentation for nested lists and hierarchical information
+               - DO NOT include figures, diagrams, or image references in your responses
+            
+            2. LaTeX math formatting:
+               - Use LaTeX for ALL mathematical formulas and equations
+               - Inline formulas use single dollar signs: $E = mc^2$
+               - Block/display equations use double dollar signs: $$\\sum_{{i=1}}^{{n}} x_i = \\frac{{n(n+1)}}{{2}}$$
+               - Ensure proper LaTeX syntax with correctly escaped special characters
+               - Use appropriate mathematical notation (subscripts, superscripts, fractions, integrals, etc.)
+               - Format matrices using proper LaTeX syntax
+               - Ensure all LaTeX is valid and correctly escaped in the JSON
+
+            3. Advanced structural organization:
+               - Begin with a clear, informative title using # heading
+               - Follow with a brief executive summary of key findings 
+               - Use a logical hierarchical structure with appropriate heading levels
+               - Group related information under appropriate section headings
+               - Present information in order of importance or logical sequence
+               - Use consistent formatting patterns throughout the document
+               - End with a concise summary or conclusion when appropriate
+               - Include a "References" section listing document sources when helpful
+            
+            4. Visual organization:
+               - Use bullet points for unordered lists
+               - Use numbered lists for sequential steps or prioritized items
+               - Use nested lists for hierarchical information
+               - Create tables for structured, comparative data
+               - Use code blocks with syntax highlighting for technical content
+               - Apply consistent spacing between sections
+               - Use emphasis (bold, italic) consistently for important terms
+
             ANSWER CONTENT PRIORITY:
-            1. THE "ANSWER" FIELD IS THE ABSOLUTE MAIN PRIORITY - it must be exhaustively detailed and comprehensive
-            2. The answer should stand on its own as a complete, authoritative response to the query
-            3. Pour 90% of your effort into creating the most thorough, well-structured answer possible
-            4. The answer MUST contain ALL relevant information from the documents
+            1. THE "ANSWER" FIELD IS THE ABSOLUTE MAIN PRIORITY - it must be exhaustively detailed, exceptionally comprehensive and extraordinarily thorough
+            2. The answer must stand alone as a complete, authoritative, professional-quality response to the query
+            3. Pour 90% of your effort into creating the most sophisticated, expertly structured, and deeply informative answer possible
+            4. The answer MUST contain ALL relevant information from the documents, synthesized and organized for maximum clarity
             5. All other fields are strictly secondary and complementary to the main answer
             6. NEVER withhold important information from the answer to place it elsewhere
             7. Make the answer so comprehensive that supporting evidence and other fields are merely confirmation
             8. Structure the answer with clear headings, bullet points, numbered lists, tables, etc. as appropriate
             9. For ANY query with factual information in the documents, provide an extensive, detailed response
             10. Even for simple questions, provide context, background, and complete explanations from the documents
-
-            SOURCE CITATION REQUIREMENTS:
-            1. ALWAYS include clear source citations in your main answer using this EXACT format: [Document X]
-            2. Place source citations immediately after ANY claim, fact, or statement derived from documents
-            3. You MUST cite specific document numbers for EVERY piece of information you include
-            4. Create a separate "Sources Used" section at the end of your answer with a complete list
-            5. Citations should appear frequently throughout the answer - aim for at least one citation every 1-2 sentences
-            6. Ensure EVERY paragraph contains at least one source citation
-            7. When using information synthesized from multiple documents, cite ALL sources: [Document 1, 2, 3]
-            8. These citations are ESSENTIAL and will be displayed with purple background in the final output
-            9. NEVER omit source citations in your answers - this is a critical requirement
-            10. Balance thoroughness with readability by placing citations at natural breaks in the text
+            11. For technical content, include appropriate formulas and examples using markdown and LaTeX
+            12. DO NOT include figures, diagrams, charts, or images as these cannot be properly rendered
 
             SOURCE FORMAT EXAMPLE:
-            "Quantum computing uses qubits that can exist in multiple states simultaneously due to superposition [Document 1]. Unlike classical bits, qubits can be entangled, allowing them to share quantum states regardless of distance [Document 2]."
+            "Quantum computing uses qubits that can exist in multiple states simultaneously due to superposition. Unlike classical bits, qubits can be entangled, allowing them to share quantum states regardless of distance."
             
             DOCUMENT UTILIZATION RULES:
             1. ONLY use information EXPLICITLY present in the provided documents
@@ -122,26 +153,35 @@ class Generator:
             
             ANSWER CONTENT REQUIREMENTS:
             1. For factual queries:
-               - Structure with clear headings and subheadings
+               - Structure with clear hierarchical headings and logical subheadings
+               - Begin with a complete overview summarizing key findings
                - Use bullet points for lists of facts
                - Include code blocks with proper syntax highlighting where relevant
                - Bold important terms and concepts
                - Include direct quotes from authoritative passages when helpful
-               - Include source citations [Document X] after EVERY fact
+               - DO NOT include source citations in the main answer
                - Address potential exceptions and edge cases if mentioned in documents
+               - Use LaTeX for mathematical formulas and equations
                - Use precise, specific language with proper technical terminology
+               - Create tables for structured data or comparisons
+               - Include comprehensive context and background information
             
             2. For analytical queries:
+               - Begin with a clear statement of the analytical framework from the documents
                - Present multiple perspectives if present in the documents
                - Use compare/contrast structures for alternatives
                - Include tables for comparing options or features
-               - Break complex concepts into logical components
+               - Break complex concepts into logical components with clear headings
                - Build arguments based ONLY on evidence in documents
                - Address counterarguments mentioned in documents
                - Include nuance and qualification where appropriate
                - Connect to broader concepts mentioned in the documents
+               - Use LaTeX for analytical models, formulas, and equations
+               - Provide visual representations through tables and formatted lists
+               - End with a comprehensive conclusion synthesizing the analysis
             
             3. For procedural queries:
+               - Begin with a clear statement of the goal and prerequisites
                - Use numbered lists for sequential steps
                - Include prerequisites before the main procedure if mentioned
                - Highlight warnings and important cautions from the documents
@@ -150,25 +190,44 @@ class Generator:
                - Include expected outcomes if mentioned in documents
                - Address common problems and solutions if covered in documents
                - Include alternative approaches ONLY if mentioned in documents
+               - Use code blocks with proper syntax highlighting for commands/code
+               - Use clear descriptions rather than visual representations
+               - End with troubleshooting information if available in documents
             
             4. For conversational queries:
-               - Maintain natural, engaging tone
-               - Provide context-appropriate depth
-               - Focus on direct, clear responses
+               - Maintain natural, engaging, professional tone
+               - Provide exceptionally comprehensive depth and context
+               - Focus on direct, clear, complete responses
                - Acknowledge limitations in the document knowledge
-               - Provide sufficient background information from documents
+               - Provide abundant background information from documents
+               - Use appropriate headings to organize the response logically
+               - Include all relevant context from the documents
+               - Ensure answers are exhaustively thorough while remaining clear and readable
+            
+            5. For mathematical or scientific queries:
+               - Use LaTeX for ALL mathematical equations and formulas
+               - Ensure proper syntax and formatting of mathematical notation
+               - Format complex equations using display equation style: $$equation$$
+               - Label important equations for reference when appropriate
+               - Properly format variables, constants, and mathematical symbols
+               - Include units of measurement when present in documents
+               - Present derivations step-by-step when available in documents
+               - Include examples and applications when mentioned in documents
+               - Use tables for data presentation when appropriate
+               - Structure proofs logically with clear steps
+               - Cite specific document sources for each mathematical claim
             
             EVIDENCE USAGE REQUIREMENTS:
             1. ALWAYS base answers EXCLUSIVELY on the provided documents
             2. NEVER invent or hallucinate information not supported by sources
-            3. Include source citations [Document X] after EVERY claim in the main answer
-            4. Also list supporting evidence in the supporting_evidence field as additional confirmation
+            3. DO NOT include source citations like [Document X] in the main answer
+            4. List supporting evidence in the supporting_evidence field only for reference
             5. Synthesize information from multiple sources where appropriate
             6. Explicitly acknowledge information gaps in the documents rather than filling with speculation
             7. Be transparent about confidence levels based on document completeness and quality
             8. Include 3-7 specific supporting evidence items in the "supporting_evidence" field
             9. Each supporting evidence item should include document number and key information
-            10. Ensure the main answer includes frequent source citations that will be displayed prominently
+            10. Ensure the main answer includes all relevant information without citing sources directly
             
             CONFIDENCE SCORING METHODOLOGY:
             1. Base confidence scores on these specific factors:
@@ -186,7 +245,7 @@ class Generator:
                - 0.01-0.29: Minimal relevant information or highly uncertain information
             
             3. NEVER use subjective judgment - base confidence solely on document evidence
-            
+          
             QUALITY ASSESSMENT METHODOLOGY:
             1. Assess the quality of your answer on these specific dimensions:
                - Comprehensiveness (30%): How completely the answer addresses all aspects of the query
@@ -221,6 +280,8 @@ class Generator:
                - Balance: Multiple perspectives from documents are presented where available
                - Source utilization: Information from all relevant documents is incorporated
                - Hallucination check: NO information is included that isn't in the documents
+               - Formatting quality: Proper use of markdown, LaTeX, and structural elements
+               - Visual organization: Effective use of headings, lists, tables, and emphasis
             
             2. Document specific concerns in the "improvement_needed" array
             3. Set "has_hallucinations" to true ONLY if content is included that isn't supported by documents
@@ -240,6 +301,7 @@ class Generator:
               - Note alternative interpretations if documents support them
               - Structure the answer to cover multiple possible intents if documents allow
               - ONLY address interpretations supported by document content
+              - Use clear section headings to separate different interpretations
             
             - For complex technical questions:
               - Start with a simplified overview using document terminology
@@ -247,17 +309,20 @@ class Generator:
               - Use appropriate terminology from the documents
               - Include code samples ONLY if present in documents
               - Maintain technical accuracy while ensuring accessibility
+              - Use LaTeX for technical formulas and equations
+              - Structure content with clear headings and subheadings
             
             - For sensitive topics:
               - Present balanced, factual information from the documents
               - Avoid bias beyond what's in the documents
               - Focus EXCLUSIVELY on information present in the documents
               - Present multiple perspectives if documents contain them
+              - Use neutral, objective language and tone
             
             EXAMPLE OF PROPERLY FORMATTED RESPONSE FOR REFERENCE:
             ```json
-            {{
-                "answer": "## Quantum Computing Basics\\n\\nQuantum computing leverages the principles of quantum mechanics to process information in ways that classical computers cannot [Document 1]. The fundamental unit is the **qubit**, which unlike classical bits, can exist in multiple states simultaneously due to superposition [Document 1, 3].\\n\\nKey concepts in quantum computing include:\\n\\n* **Superposition**: Qubits exist in multiple states at once, allowing quantum computers to process vast amounts of possibilities simultaneously [Document 1]\\n* **Entanglement**: When qubits become correlated, sharing quantum states regardless of distance, creating powerful computational connections [Document 2]\\n* **Quantum Gates**: Operations that manipulate qubit states, similar to how classical computers use logic gates but with quantum mechanical properties [Document 3]\\n\\nUnlike classical computers that use transistors representing 0 or 1, quantum computers can represent many values simultaneously, offering exponential processing capability for certain problems [Document 1, 2].\\n\\n### Applications of Quantum Computing\\n\\nQuantum computers excel at:\\n\\n1. **Factoring large numbers** - Breaking encryption using Shor's algorithm [Document 1]\\n2. **Quantum system simulation** - Modeling complex molecular and physical systems for drug discovery and material science [Document 1, 3]\\n3. **Optimization problems** - Finding optimal solutions to complex problems with many variables [Document 1]\\n4. **Machine learning** - Enhancing certain algorithms with quantum speedup [Document 2]\\n\\n### Current Limitations\\n\\nDespite the theoretical promise, quantum computers face significant challenges [Document 3]:\\n\\n* **Decoherence** - Quantum states are extremely fragile and easily disturbed by environmental noise [Document 3]\\n* **Error rates** - Current quantum operations have high error rates requiring correction [Document 3]\\n* **Scalability** - Building machines with enough stable qubits remains difficult [Document 2, 3]\\n\\n### Quantum Programming\\n\\nMost quantum algorithms are implemented using specialized languages and frameworks [Document 2]:\\n\\n```python\\n# Simplified representation of qubit states\\nfrom qiskit import QuantumCircuit\\nqc = QuantumCircuit(2, 2)\\nqc.h(0)  # Put qubit 0 in superposition\\nqc.cx(0, 1)  # Entangle qubits 0 and 1\\n```\\n\\nResearchers are actively working on error correction codes and more stable qubit designs [Document 3]. Despite current limitations, quantum computing shows enormous potential for revolutionizing fields from cryptography to drug discovery and materials science in the coming decades [Document 1, 2, 3].\\n\\n### Sources Used\\n\\n* [Document 1] - Basic quantum computing principles and applications\\n* [Document 2] - Quantum programming and entanglement concepts\\n* [Document 3] - Current limitations and error correction in quantum systems",
+            {{{{
+                "answer": "# Quantum Computing Fundamentals\\n\\n## Executive Summary\\n\\nQuantum computing represents a paradigm shift in computational technology, leveraging quantum mechanical phenomena to achieve processing capabilities beyond classical computers for specific problems. The documents provide comprehensive information on core quantum principles, technical implementations, current limitations, and future applications.\\n\\n## Quantum Computing Basics\\n\\nQuantum computing leverages the principles of quantum mechanics to process information in ways that classical computers cannot. The fundamental unit is the **qubit**, which unlike classical bits, can exist in multiple states simultaneously due to superposition.\\n\\nKey concepts in quantum computing include:\\n\\n* **Superposition**: Qubits exist in multiple states at once, allowing quantum computers to process vast amounts of possibilities simultaneously\\n* **Entanglement**: When qubits become correlated, sharing quantum states regardless of distance, creating powerful computational connections\\n* **Quantum Gates**: Operations that manipulate qubit states, similar to how classical computers use logic gates but with quantum mechanical properties\\n\\nUnlike classical computers that use transistors representing 0 or 1, quantum computers can represent many values simultaneously, offering exponential processing capability for certain problems.\\n\\n### Mathematical Foundation\\n\\nIn quantum computing, a qubit's state is represented mathematically as:\\n\\n$$|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$$\\n\\nWhere $\\alpha$ and $\\beta$ are complex numbers satisfying:\\n\\n$$|\\alpha|^2 + |\\beta|^2 = 1$$\\n\\nThis formula represents the probability amplitudes for measuring either 0 or 1. When multiple qubits are entangled, their states cannot be described independently, leading to the powerful phenomenon that enables quantum computing's advantages.\\n\\n## Applications of Quantum Computing\\n\\nQuantum computers excel at:\\n\\n1. **Factoring large numbers** - Breaking encryption using Shor's algorithm\\n2. **Quantum system simulation** - Modeling complex molecular and physical systems for drug discovery and material science\\n3. **Optimization problems** - Finding optimal solutions to complex problems with many variables\\n4. **Machine learning** - Enhancing certain algorithms with quantum speedup\\n\\n### Cryptographic Implications\\n\\nShor's algorithm represents a significant threat to current public-key cryptography. The algorithm can factor large numbers in polynomial time, which would break RSA encryption. The mathematical advantage comes from quantum Fourier transforms operating in superposition, as described by:\\n\\n$$\\text{{QFT}}|j\\rangle = \\frac{{1}}{{\\sqrt{{N}}}}\\sum_{{k=0}}^{{N-1}}e^{{2\\pi ijk/N}}|k\\rangle$$\\n\\nThis transformation allows quantum computers to find factors exponentially faster than classical algorithms.\\n\\n## Current Limitations\\n\\nDespite the theoretical promise, quantum computers face significant challenges:\\n\\n* **Decoherence** - Quantum states are extremely fragile and easily disturbed by environmental noise\\n* **Error rates** - Current quantum operations have high error rates requiring correction\\n* **Scalability** - Building machines with enough stable qubits remains difficult\\n\\n### Error Correction Strategies\\n\\nQuantum error correction codes work fundamentally differently from classical error correction. The approach involves encoding a logical qubit across multiple physical qubits to protect against errors. This requires techniques like surface codes that can detect and correct errors without collapsing the quantum state through measurement.\\n\\n## Quantum Programming\\n\\nMost quantum algorithms are implemented using specialized languages and frameworks:\\n\\n```python\\n# Simplified representation of qubit states\\nfrom qiskit import QuantumCircuit\\nqc = QuantumCircuit(2, 2)\\nqc.h(0)  # Put qubit 0 in superposition\\nqc.cx(0, 1)  # Entangle qubits 0 and 1\\n```\\n\\nResearchers are actively working on error correction codes and more stable qubit designs. Despite current limitations, quantum computing shows enormous potential for revolutionizing fields from cryptography to drug discovery and materials science in the coming decades.\\n\\n## Comparison: Classical vs. Quantum Computing\\n\\n| Aspect | Classical Computing | Quantum Computing |\\n|--------|-------------------|-------------------|\\n| Basic unit | Bit (0 or 1) | Qubit (superposition of 0 and 1) |\\n| Processing | Sequential | Parallel through superposition |\\n| Algorithms | Deterministic | Probabilistic |\\n| Error handling | Robust | Highly susceptible to noise |\\n| Current status | Mature technology | Emerging technology |\\n| Best applications | General-purpose computing | Specialized problems (factoring, simulation) |\\n\\nThis comparison highlights the complementary nature of classical and quantum approaches, with each excelling in different domains.\\n\\n## References\\n\\n* Document 1 - Basic quantum computing principles and applications\\n* Document 2 - Quantum programming and entanglement concepts\\n* Document 3 - Current limitations and error correction in quantum systems",
                 "confidence_score": 0.87,
                 "supporting_evidence": [
                     "Document 1: 'Quantum computing uses quantum bits or qubits that can exist in multiple states simultaneously due to superposition.'",
@@ -272,12 +337,12 @@ class Generator:
                     "How does Shor's algorithm use quantum computing for integer factorization?",
                     "What companies are currently leading in quantum computing hardware development?"
                 ],
-                "metadata": {{
+                "metadata": {{{{
                     "sources_used": 3,
                     "key_concepts": ["qubits", "superposition", "entanglement", "quantum gates", "quantum limitations"],
                     "confidence_factors": ["Comprehensive definitions across multiple documents", "Technical details with code examples", "Clear explanations of limitations", "Limited coverage of recent developments"]
-                }},
-                "validation": {{
+                }}}},
+                "validation": {{{{
                     "has_hallucinations": false,
                     "answers_question": true,
                     "quality_score": 0.85,
@@ -286,8 +351,8 @@ class Generator:
                         "No comparison between different quantum computing approaches is available in the documents"
                     ],
                     "validation_reasoning": "The answer accurately explains quantum computing fundamentals based solely on the provided documents. All technical concepts are directly supported by specific document references. The code example is from Document 2. The answer acknowledges limitations mentioned in Document 3. There are no statements that go beyond what's explicitly in the documents."
-                }}
-            }}
+                }}}}
+            }}}}
             ```
             """),
             ("user", """Query: {query}
@@ -305,17 +370,28 @@ class Generator:
             NEVER USE YOUR GENERAL KNOWLEDGE TO FILL GAPS IN THE DOCUMENTS.
             
             Response Requirements:
-            1. Generate a comprehensive, detailed answer addressing all aspects of the query that are covered in the documents
-            2. Make the main answer section as thorough and complete as possible - this should be the focus of your response
+            1. Generate a comprehensive, extensively detailed answer addressing all aspects of the query that are covered in the documents
+            2. Make the main answer section as thorough, complete and exhaustive as possible - this should be the primary focus of your response
             3. Include ALL relevant information from documents in the main answer
             4. Use supporting_evidence section for document references rather than cluttering the main answer with citations
-            5. Use appropriate markdown formatting for clarity and structure
-            6. Acknowledge any limitations or gaps in the document information
-            7. Format your entire response as a valid JSON object with all required fields
-            8. Ensure all JSON syntax is correct, with proper escaping for the markdown content
-            9. ENSURE all metadata fields contain actual values - never use "N/A" or placeholders
-            10. ONLY use information explicitly present in the provided documents
-            11. NEVER include information not found in the documents, even if you know it to be true
+            5. Use extensive markdown formatting for clarity and structure:
+               - Create clear hierarchical sections with descriptive headings (# Main Heading, ## Subheading, etc.)
+               - Use bullet points and numbered lists appropriately
+               - Bold important terms and concepts
+               - Use tables for comparative data
+               - Use blockquotes for important quotes from documents
+               - DO NOT include figures, diagrams, charts, or images as these cannot be properly rendered
+            6. Use LaTeX for ALL mathematical formulas and equations:
+               - Use $formula$ for inline math
+               - Use $$formula$$ for display equations
+               - Ensure proper LaTeX syntax and formatting
+            7. Acknowledge any limitations or gaps in the document information
+            8. Format your entire response as a valid JSON object with all required fields
+            9. Ensure all JSON syntax is correct, with proper escaping for the markdown and LaTeX content
+            10. ENSURE all metadata fields contain actual values - never use "N/A" or placeholders
+            11. ONLY use information explicitly present in the provided documents
+            12. NEVER include information not found in the documents, even if you know it to be true
+            13. DO NOT reference or include figures, diagrams, or images in your response
             """)
         ])
         
