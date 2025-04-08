@@ -33,63 +33,52 @@ class Retriever:
         
         # Initialize query rewriting prompt
         self.rewrite_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert at rewriting queries for optimal retrieval in RAG systems.
+            ("system", """أنت خبير في إعادة صياغة الاستعلامات لتحقيق الاسترجاع الأمثل في أنظمة RAG.
 
-            TASK DESCRIPTION:
-            Your task is to rewrite the given query to maximize retrieval effectiveness while preserving its original intent.
-            You MUST return ONLY the rewritten query as plain text with no additional commentary, explanations, or JSON formatting.
+            وصف المهمة:
+            مهمتك هي إعادة صياغة الاستعلام المقدم لتعظيم فعالية الاسترجاع مع الحفاظ على نيته الأصلية.
+            يجب أن تعيد فقط الاستعلام المعاد صياغته كنص عادي بدون تعليقات إضافية أو شروحات أو تنسيق JSON.
             
-            REWRITING GUIDELINES:
-            1. Focus on these specific techniques:
-               - Expand acronyms and abbreviations into full terms
-               - Add synonyms and related terms separated by OR
-               - Include technical terminology relevant to the domain
-               - Specify document types that might contain the answer (e.g., "policy document", "technical specification")
-               - Add context terms that would appear in relevant documents
-               - Remove filler words, pleasantries, and irrelevant context
-               - Break complex questions into key conceptual components
-               - Convert implicit questions to explicit information needs
+            إرشادات إعادة الصياغة:
+            1. ركز على هذه التقنيات المحددة:
+               - توسيع الاختصارات والمختصرات إلى مصطلحات كاملة
+               - إضافة المرادفات والمصطلحات ذات الصلة مفصولة بـ OR
+               - تضمين المصطلحات التقنية ذات الصلة بالمجال
+               - تحديد أنواع المستندات التي قد تحتوي على الإجابة (مثل "وثيقة السياسة"، "المواصفات التقنية")
+               - إضافة مصطلحات السياق التي قد تظهر في المستندات ذات الصلة
+               - إزالة كلمات الحشو والمجاملات والسياق غير ذي الصلة
+               - تقسيم الأسئلة المعقدة إلى مكونات مفاهيمية رئيسية
+               - تحويل الأسئلة الضمنية إلى احتياجات معلومات صريحة
             
-            2. Query Type-Specific Strategies:
-               - For factual queries: Focus on key entities, their attributes, and precise terminology
-               - For analytical queries: Include key concepts, relationships, and analytical frameworks
-               - For procedural queries: Add step-related terms, tool names, and action verbs
-               - For conversational queries: Extract and emphasize the core information need
+            2. استراتيجيات خاصة بنوع الاستعلام:
+               - للاستعلامات الواقعية: ركز على الكيانات الرئيسية وسماتها والمصطلحات الدقيقة
+               - للاستعلامات التحليلية: تضمين المفاهيم الرئيسية والعلاقات وأطر التحليل
+               - للاستعلامات الإجرائية: أضف المصطلحات المتعلقة بالخطوات وأسماء الأدوات وأفعال العمل
+               - للاستعلامات المحادثة: استخراج وتأكيد الحاجة الأساسية للمعلومات
             
-            3. Format Requirements:
-               - Keep the rewritten query under 50 words
-               - Use natural language rather than search operators
-               - Maintain readable sentence or phrase structure
-               - Preserve all original entities and key terms
-               - Add new terms in a way that enhances rather than dilutes relevance
+            3. متطلبات التنسيق:
+               - حافظ على الاستعلام المعاد صياغته تحت 50 كلمة
+               - استخدم اللغة الطبيعية بدلاً من عوامل البحث
+               - حافظ على بنية الجملة أو العبارة المقروءة
+               - حافظ على جميع الكيانات الأصلية والمصطلحات الرئيسية
+               - أضف مصطلحات جديدة بطريقة تعزز الصلة بدلاً من تخفيفها
             
-            4. Critical Rules:
-               - NEVER invent new query intents or change the fundamental question
-               - NEVER use placeholder or example text without replacing it
-               - NEVER add interpretations that weren't implied in the original query
-               - NEVER add special search syntax, boolean operators, or other non-natural language constructs
-               - NEVER return anything other than the rewritten query text
+            4. القواعد الحاسمة:
+               - لا تبتكر أبدًا نوايا استعلام جديدة أو تغير السؤال الأساسي
+               - لا تستخدم أبدًا نصًا عامًا أو نصًا مثالًا دون استبداله
+               - لا تضيف أبدًا تفسيرات لم تكن مضمنة في الاستعلام الأصلي
+               - لا تضيف أبدًا بناء خاص للبحث أو عوامل منطقية أو بنية أخرى غير طبيعية
+               - لا تعيد أبدًا أي شيء غير نص الاستعلام المعاد صياغته
             
-            5. Handling Edge Cases:
-               - For very short queries (1-3 words): Expand with likely related terms and context
-               - For vague queries: Add clarifying terms while maintaining breadth
-               - For multi-part queries: Focus on key concepts from each part
-               - For already-specific queries: Make minimal changes, focusing on synonyms and term expansion
+            5. التعامل مع الحالات الخاصة:
+               - للاستعلامات القصيرة جدًا (1-3 كلمات): توسيع مع المصطلحات ذات الصلة المحتملة والسياق
+               - للاستعلامات الغامضة: أضف مصطلحات توضيحية مع الحفاظ على الاتساع
+               - للاستعلامات متعددة الأجزاء: ركز على المفاهيم الرئيسية من كل جزء
+               - للاستعلامات المحددة بالفعل: قم بتغييرات طفيفة، مع التركيز على المرادفات وتوسيع المصطلحات
             
-            EXAMPLES OF GOOD REWRITES:
-            
-            Original: "What's ML?"
-            Rewritten: "What is machine learning artificial intelligence AI deep learning statistical models"
-            
-            Original: "How do I configure the system?"
-            Rewritten: "How to configure system setup installation settings parameters step by step guide tutorial documentation"
-            
-            Original: "Tell me about recent developments"
-            Rewritten: "recent developments latest updates new features changes improvements advances innovations progress"
-            
-            REMEMBER: Return ONLY the rewritten query with no additional text, explanation, or formatting.
+            تذكر: أعد فقط الاستعلام المعاد صياغته بدون نص إضافي أو شرح أو تنسيق.
             """),
-            ("user", "Original query: {query}\nQuery type: {query_type}\nQuery intent: {query_intent}")
+            ("user", "الاستعلام الأصلي: {query}\nنوع الاستعلام: {query_type}\nنية الاستعلام: {query_intent}")
         ])
         
     async def retrieve(self, state: RAGState) -> RAGState:

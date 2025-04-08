@@ -36,7 +36,7 @@ export function AssistantMessage({
   }, [hideMetadata]);
 
   return (
-    <div className="flex items-start mr-auto gap-2 group w-full">
+    <div className="flex items-start ml-auto gap-2 group w-full">
       <div className="flex flex-col gap-2 w-full">
         <div className="py-1">
           <MarkdownText>{contentString}</MarkdownText>
@@ -50,7 +50,7 @@ export function AssistantMessage({
               onClick={() => setShowMetadata(!showMetadata)}
             >
               <Info className="h-3 w-3" />
-              {showMetadata ? "Hide" : "Show"} metadata
+              {showMetadata ? "إخفاء" : "عرض"} البيانات
               {showMetadata ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             </Button>
             
@@ -64,7 +64,7 @@ export function AssistantMessage({
 
         <div
           className={cn(
-            "flex gap-2 items-center mr-auto transition-opacity",
+            "flex gap-2 items-center ml-auto transition-opacity",
             "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
           )}
         >
@@ -91,7 +91,7 @@ function MetadataDisplay({ metadata }: { metadata: any }) {
         if (key === 'metadata' && typeof value === 'object') {
           return (
             <div className="col-span-2 border-t pt-1 mt-1" key={key}>
-              <strong className="font-medium">Additional Metadata:</strong>
+              <strong className="font-medium">بيانات إضافية:</strong>
               <div className="pl-2 mt-1">
                 <MetadataDisplay metadata={value} />
               </div>
@@ -116,7 +116,7 @@ function MetadataDisplay({ metadata }: { metadata: any }) {
             <span className="truncate max-w-[70%] text-right">
               {typeof value === 'number' 
                 ? key.includes('time') 
-                  ? `${value.toFixed(2)}s` 
+                  ? `${value.toFixed(2)}ث` 
                   : value.toString()
                 : String(value)}
             </span>

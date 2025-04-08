@@ -31,7 +31,7 @@ function ContentCopyable({
     <TooltipIconButton
       onClick={(e) => handleCopy(e)}
       variant="ghost"
-      tooltip="Copy content"
+      tooltip="نسخ المحتوى"
       disabled={disabled}
     >
       <AnimatePresence mode="wait" initial={false}>
@@ -82,9 +82,9 @@ export function BranchSwitcher({
         size="icon"
         className="size-6 p-1"
         onClick={() => {
-          const prevBranch = branchOptions[index - 1];
-          if (!prevBranch) return;
-          onSelect(prevBranch);
+          const nextBranch = branchOptions[index + 1];
+          if (!nextBranch) return;
+          onSelect(nextBranch);
         }}
         disabled={isLoading}
       >
@@ -98,9 +98,9 @@ export function BranchSwitcher({
         size="icon"
         className="size-6 p-1"
         onClick={() => {
-          const nextBranch = branchOptions[index + 1];
-          if (!nextBranch) return;
-          onSelect(nextBranch);
+          const prevBranch = branchOptions[index - 1];
+          if (!prevBranch) return;
+          onSelect(prevBranch);
         }}
         disabled={isLoading}
       >
@@ -131,7 +131,7 @@ export function CommandBar({
         className="h-8 w-8"
         onClick={() => {
           navigator.clipboard.writeText(content);
-          toast.success("Copied to clipboard");
+          toast.success("تم النسخ إلى الحافظة");
         }}
       >
         <Copy className="h-4 w-4" />

@@ -16,106 +16,79 @@ class QueryAnalyzer:
         self.rate_limiter = rate_limiter
         
         self.analysis_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert query analyzer for a RAG system, responsible for understanding and classifying user queries with high precision.
+            ("system", """أنت محلل استعلامات خبير لنظام RAG، مسؤول عن فهم وتصنيف استفسارات المستخدم بدقة عالية.
 
-            OUTPUT FORMAT REQUIREMENTS:
-            You MUST respond with a valid JSON object containing EXACTLY these fields:
+            متطلبات تنسيق المخرجات:
+            يجب أن ترد بكائن JSON صالح يحتوي على هذه الحقول بالضبط:
             {{
                 "is_related_to_index": boolean,
-                "query_type": string (one of: "factual", "analytical", "procedural", "conversational"),
+                "query_type": string (واحد من: "factual", "analytical", "procedural", "conversational"),
                 "query_entities": array of strings,
                 "query_intent": string,
-                "confidence": number (between 0.0 and 1.0),
+                "confidence": number (بين 0.0 و 1.0),
                 "reasoning": string
             }}
             
-            If ANY field is missing or incorrectly formatted, the system will fail. ENSURE VALID JSON SYNTAX.
+            إذا كان أي حقل مفقودًا أو منسقًا بشكل غير صحيح، فسيفشل النظام. تأكد من صحة بناء JSON.
 
-            CLASSIFICATION GUIDELINES:
-            1. Consider a query "related to index" (is_related_to_index = true) in these cases:
-               - It asks about specific domain knowledge that might be in the index
-               - It's a general query that can be answered using indexed knowledge
-               - It's a greeting or general question that should be handled gracefully
-               - DEFAULT TO TRUE if uncertain - it's better to attempt an answer with available knowledge
+            إرشادات التصنيف:
+            1. اعتبر الاستعلام "متعلق بالفهرس" (is_related_to_index = true) في هذه الحالات:
+               - إذا كان يسأل عن معرفة مجال محددة قد تكون في الفهرس
+               - إذا كان استعلامًا عامًا يمكن الإجابة عليه باستخدام المعرفة المفهرسة
+               - إذا كان تحية أو سؤالًا عامًا يجب التعامل معه بلطف
+               - اعتبره صحيحًا إذا كنت غير متأكد - من الأفضل محاولة الإجابة بالمعرفة المتاحة
             
-            2. Only mark as "unrelated to index" (is_related_to_index = false) if the query:
-               - Explicitly requires real-time data that definitely won't be in static knowledge (e.g., current stock prices)
-               - Needs information that's definitely not in any knowledge base (e.g., personal user data)
-               - Requires external API calls or web-specific functionality
-               - Contains malicious intent or violates ethical guidelines
+            2. ضع علامة "غير متعلق بالفهرس" (is_related_to_index = false) فقط إذا كان الاستعلام:
+               - يتطلب صراحة بيانات في الوقت الفعلي بالتأكيد لن تكون في المعرفة الثابتة
+               - يحتاج إلى معلومات بالتأكيد ليست في أي قاعدة معرفة
+               - يتطلب استدعاءات واجهة برمجة تطبيقات خارجية أو وظائف خاصة بالويب
+               - يحتوي على نوايا ضارة أو ينتهك المبادئ التوجيهية الأخلاقية
             
-            QUERY TYPE DEFINITIONS (ALWAYS assign one of these exact values for "query_type"):
-            - "factual": Direct questions seeking specific information, facts, definitions, or straightforward answers
-              Examples: "What is X?", "When was Y invented?", "Who created Z?"
+            تعريفات نوع الاستعلام (يجب دائمًا تعيين إحدى هذه القيم لـ "query_type"):
+            - "factual": أسئلة مباشرة تبحث عن معلومات محددة، حقائق، تعريفات، أو إجابات مباشرة
+              أمثلة: "ما هو X؟"، "متى تم اختراع Y؟"، "من أنشأ Z؟"
             
-            - "analytical": Questions requiring analysis, comparison, reasoning, evaluation, or synthesis
-              Examples: "Why did X happen?", "How does Y compare to Z?", "What are the implications of X?"
+            - "analytical": أسئلة تتطلب تحليل، مقارنة، تفكير، تقييم، أو تركيب
+              أمثلة: "لماذا حدث X؟"، "كيف يقارن Y بـ Z؟"، "ما هي آثار X؟"
             
-            - "procedural": How-to questions or step-by-step instructions seeking guidance on processes
-              Examples: "How do I X?", "What steps should I follow to Y?", "Explain the process of Z"
+            - "procedural": أسئلة كيفية أو تعليمات خطوة بخطوة تطلب إرشادات حول العمليات
+              أمثلة: "كيف أقوم بـ X؟"، "ما هي الخطوات التي يجب اتباعها لـ Y؟"، "اشرح عملية Z"
             
-            - "conversational": Greetings, chitchat, general dialogue, or questions about the system itself
-              Examples: "Hello", "How are you?", "Can you help me with something?", "What can you do?"
+            - "conversational": تحيات، نظام ، حوار عام، أو أسئلة حول النظام نفسه
+              أمثلة: "مرحبا"، "كيف حالك؟"، "هل يمكنك مساعدتي في شيء ما؟"، "ماذا يمكنك أن تفعل؟"
             
-            ENTITY EXTRACTION REQUIREMENTS (query_entities):
-            - Extract both explicit and implicit entities (minimum 1, maximum 10)
-            - Include relevant context words around entities
-            - Note relationships between entities
-            - For ambiguous queries, extract broader topic areas
-            - If no entities are present (e.g., in pure greetings), include an empty array
+            متطلبات استخراج الكيانات (query_entities):
+            - استخرج الكيانات الصريحة والضمنية (الحد الأدنى 1، الحد الأقصى 10)
+            - تضمين كلمات السياق ذات الصلة حول الكيانات
+            - ملاحظة العلاقات بين الكيانات
+            - للاستعلامات الغامضة، استخرج مجالات الموضوع الأوسع
+            - إذا لم تكن هناك كيانات (مثل التحيات الخالصة)، قم بتضمين مصفوفة فارغة
             
-            INTENT CLASSIFICATION GUIDELINES (query_intent):
-            - Be specific and detailed about the user's actual goal
-            - Choose from these categories but ADD SPECIFICITY beyond the category name:
-              - information_seeking: User wants to learn something specific
-              - clarification: User needs explanation or disambiguation
-              - greeting: User is initiating/continuing conversation
-              - task: User wants to accomplish something specific
-              - feedback: User is providing feedback or opinions
-            - ALWAYS include details on what exact information or action the user seeks
+            إرشادات تصنيف النوايا (query_intent):
+            - كن محددًا ومفصلًا حول هدف المستخدم الفعلي
+            - اختر من هذه الفئات ولكن أضف تفاصيل محددة تتجاوز اسم الفئة:
+              - information_seeking: يريد المستخدم أن يتعلم شيئًا محددًا
+              - clarification: يحتاج المستخدم إلى شرح أو توضيح
+              - greeting: المستخدم يبدأ/يواصل المحادثة
+              - task: يريد المستخدم إنجاز شيء محدد
+              - feedback: المستخدم يقدم ملاحظات أو آراء
+            - دائمًا تضمين تفاصيل حول ما هي المعلومات أو الإجراء الذي يبحث عنه المستخدم بالضبط
             
-            CONFIDENCE SCORING RULES:
-            - 0.9-1.0: Very clear, unambiguous query with obvious classification
-            - 0.7-0.9: Clear intent but some minor ambiguity
-            - 0.5-0.7: Moderate ambiguity but reasonably confident
-            - 0.3-0.5: Significant ambiguity with multiple possible interpretations
-            - 0.0-0.3: Extremely vague or ambiguous query
-            - NEVER leave as 0.0 or 1.0 exactly - always provide a nuanced score
+            قواعد تقييم الثقة:
+            - 0.9-1.0: استعلام واضح جدًا لا لبس فيه مع تصنيف واضح
+            - 0.7-0.9: نية واضحة ولكن مع بعض الغموض البسيط
+            - 0.5-0.7: غموض معتدل ولكن ثقة معقولة
+            - 0.3-0.5: غموض كبير مع تفسيرات محتملة متعددة
+            - 0.0-0.3: استعلام غامض جدًا أو غامض للغاية
+            - لا تترك أبدًا 0.0 أو 1.0 بالضبط - دائمًا قدم درجة دقيقة
             
-            REASONING REQUIREMENTS:
-            - Provide clear justification for all classifications
-            - Explain any ambiguities or challenges in classification
-            - Keep under 100 words but be specific and thorough
-            - Focus on WHY you classified as you did rather than restating the classification
-            
-            HANDLING EDGE CASES:
-            - Empty queries: Classify as conversational with low confidence
-            - Non-sensical queries: Attempt best classification with low confidence
-            - Multi-part queries: Focus on dominant intent, note multiple aspects in reasoning
-            - Ambiguous queries: Choose most likely classification, note alternatives in reasoning
-            
-            EXAMPLES OF PROPERLY FORMATTED RESPONSES:
-            For "What is quantum computing?":
-            {{
-                "is_related_to_index": true,
-                "query_type": "factual",
-                "query_entities": ["quantum computing"],
-                "query_intent": "information_seeking: Learn basic definition and concept of quantum computing",
-                "confidence": 0.95,
-                "reasoning": "Clear factual question seeking definition and explanation of a specific technical concept."
-            }}
-            
-            For "Hello, how are you today?":
-            {{
-                "is_related_to_index": true,
-                "query_type": "conversational",
-                "query_entities": [],
-                "query_intent": "greeting: Initiating casual conversation with the system",
-                "confidence": 0.98,
-                "reasoning": "Standard conversational greeting with no specific information request."
-            }}
+            متطلبات التفكير:
+            - قدم تبريرًا واضحًا لجميع التصنيفات
+            - اشرح أي غموض أو تحديات في التصنيف
+            - أبقِه تحت 100 كلمة ولكن كن محددًا وشاملاً
+            - ركز على سبب تصنيفك كما فعلت بدلاً من إعادة صياغة التصنيف
             """),
-            ("user", "Analyze this query with the above guidelines: {query}")
+            ("user", "حلل هذا الاستعلام وفقًا للإرشادات أعلاه: {query}")
         ])
         
     async def analyze(self, state: RAGState) -> RAGState:

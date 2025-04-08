@@ -13,7 +13,7 @@ class RAGSettings(BaseSettings):
     temperature: float = Field(0.7, description="Temperature for text generation")
     
     # Retrieval settings
-    max_documents: int = Field(5, description="Maximum number of documents to retrieve")
+    max_documents: int = Field(6, description="Maximum number of documents to retrieve")
     similarity_threshold: float = Field(0.7, description="Minimum similarity score for retrieval")
     
     # Web search settings

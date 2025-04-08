@@ -38,7 +38,7 @@ llm = ChatGoogleGenerativeAI(
 )
 
 embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+    model_name="aubmindlab/bert-base-arabertv02"
 )
 
 # Load vector store
@@ -59,7 +59,7 @@ pipeline = RAGPipeline(
     config={
         "max_retrieval_attempts": 2,  # Reduced from 3 to align with graph settings
         "max_generation_attempts": 1,  # Reduced from 2 to align with graph settings
-        "min_confidence_score": 0.7,
+        "min_confidence_score": 0.9,
         "tavily_api_key": os.getenv("TAVILY_API_KEY"),
         "requests_per_minute": 30
     }
@@ -98,9 +98,11 @@ class QueryResponse(BaseModel):
 async def root():
     return {
         "status": "ok", 
-        "message": "RAG API is running", 
+        "message": "واجهة برمجة تطبيقات RAG قيد التشغيل", 
         "version": "1.0.0",
-        "strict_mode": "Answers are strictly limited to information in retrieved documents"
+        "strict_mode": "الإجابات مقتصرة بشكل صارم على المعلومات الموجودة في المستندات المسترجعة",
+        "language": "Arabic",
+        "rtl_support": True
     }
 
 @app.post("/api/query", response_model=QueryResponse)

@@ -12,7 +12,7 @@ export function HumanMessage({
   const contentString = getContentString(message.content);
 
   return (
-    <div className="flex items-center ml-auto gap-2 group">
+    <div className="flex items-center mr-auto gap-2 group">
       <div className="flex flex-col gap-2">
         <p className="text-right px-4 py-2 rounded-3xl bg-muted">
           {contentString}

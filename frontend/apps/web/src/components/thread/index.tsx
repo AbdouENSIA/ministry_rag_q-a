@@ -53,7 +53,7 @@ function ScrollToBottom(props: { className?: string }) {
       onClick={() => scrollToBottom()}
     >
       <ArrowDown className="w-4 h-4" />
-      <span>Scroll to bottom</span>
+      <span>انتقل إلى الأسفل</span>
     </Button>
   );
 }
@@ -221,7 +221,7 @@ export function Thread() {
               <div className="flex gap-2 items-center cursor-pointer">
                 <LangGraphLogoSVG width={32} height={32} />
                 <span className="text-xl font-semibold tracking-tight">
-                  RAG Chat
+                  نظام  RAG
                 </span>
               </div>
             </div>
@@ -280,7 +280,7 @@ export function Thread() {
                   <div className="flex gap-3 items-center">
                     <LangGraphLogoSVG className="flex-shrink-0 h-8" />
                     <h1 className="text-2xl font-semibold tracking-tight">
-                      RAG Chat
+                      نظام  RAG
                     </h1>
                   </div>
                 )}
@@ -303,7 +303,7 @@ export function Thread() {
                           form?.requestSubmit();
                         }
                       }}
-                      placeholder="Type your message..."
+                      placeholder="اكتب رسالتك هنا..."
                       className="p-3.5 pb-0 border-none bg-transparent field-sizing-content shadow-none ring-0 outline-none focus:outline-none focus:ring-0 resize-none"
                     />
 
@@ -319,7 +319,7 @@ export function Thread() {
                             htmlFor="render-tool-calls"
                             className="text-sm text-gray-600"
                           >
-                            Hide Metadata
+                            إخفاء البيانات
                           </Label>
                           
                           <Button 
@@ -332,14 +332,14 @@ export function Thread() {
                             }}
                           >
                             <SquarePen className="w-3 h-3 mr-1" />
-                            New Chat
+                            محادثة جديدة
                           </Button>
                         </div>
                       </div>
                       {stream.isLoading ? (
                         <Button key="stop" onClick={() => stream.stop()}>
                           <LoaderCircle className="w-4 h-4 animate-spin" />
-                          Cancel
+                          إلغاء
                         </Button>
                       ) : (
                         <Button
@@ -347,7 +347,7 @@ export function Thread() {
                           className="transition-all shadow-md"
                           disabled={isLoading || !input.trim()}
                         >
-                          Send
+                          إرسال
                         </Button>
                       )}
                     </div>
