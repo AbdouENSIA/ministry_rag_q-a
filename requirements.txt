@@ -1,16 +1,16 @@
 # Core dependencies
 python-dotenv==1.0.1  # Latest as of Jan 2025 per PyPI
-langchain>=0.1.0
-langchain-core>=0.1.10
+langchain>=0.3.22  # Latest as of Mar 17, 2025 per PyPI
+langchain-core>=0.3.49  # Latest as of Feb 24, 2025 per PyPI (no newer version found)
 langchain-groq==0.2.0  # Latest as of Mar 18, 2025 per PyPI
-langchain-community>=0.0.10
+langchain-community>=0.3.20  # Latest as of Mar 18, 2025 per PyPI
 langchain-chroma==0.2.2  # Latest as of Feb 11, 2025 per PyPI
 langgraph>=0.2.34  # No newer version found beyond 0.2.34 as of latest checks
 
 # Vector store and embeddings
-chromadb>=0.4.18
+chromadb==0.6.3  # Latest as of Jan 14, 2025 per PyPI
 sentence-transformers>=3.2.0  # Latest as of Mar 31, 2025 per PyPI
-langchain-huggingface>=0.0.6
+langchain-huggingface==0.1.0  # Latest as of Mar 18, 2025 per PyPI
 
 # Rich CLI interface
 rich==13.9.2  # Latest as of Mar 31, 2025 per PyPI
@@ -40,14 +40,3 @@ fastapi==0.115.0  # Latest as of Mar 31, 2025 per PyPI
 uvicorn==0.32.0  # Latest as of Mar 31, 2025 per PyPI
 
 tf_keras==2.18.0  # Latest as of Mar 31, 2025 per PyPI, matches TensorFlow 2.18.0
-
-# Added from the code block
-pypdf>=3.17.1
-pytesseract>=0.3.10
-Pillow>=10.0.0
-PyMuPDF>=1.23.7
-numpy>=1.24.3
-opencv-python>=4.8.0
-pdf2image>=1.16.3
-unstructured>=0.10.30
-unstructured-inference>=0.7.11

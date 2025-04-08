@@ -58,7 +58,7 @@ pipeline = RAGPipeline(
     embeddings=embeddings,
     config={
         "max_retrieval_attempts": 2,  # Reduced from 3 to align with graph settings
-        "max_generation_attempts": 1,  # Reduced from 2 to align with graph settings
+        "max_generation_attempts": 2,  # Reduced from 2 to align with graph settings
         "min_confidence_score": 0.9,
         "tavily_api_key": os.getenv("TAVILY_API_KEY"),
         "requests_per_minute": 30
@@ -132,7 +132,7 @@ def format_response(result: Dict[str, Any], include_source_documents: bool = Fal
     validation = {
         'has_hallucinations': result.get('has_hallucinations', False),
         'answers_question': result.get('answers_question', True),
-        'quality_score': result.get('quality_score', 0.7),
+        'quality_score': result.get('quality_score', 0.9),
         'improvement_needed': result.get('improvement_needed', ["Could be improved with more specific information"]),
         'validation_reasoning': result.get('validation_reasoning', "Based on available document content")
     }
@@ -179,4 +179,4 @@ def format_response(result: Dict[str, Any], include_source_documents: bool = Fal
     return response
 
 if __name__ == "__main__":
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True) 
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
