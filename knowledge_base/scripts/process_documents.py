@@ -3,6 +3,11 @@ from pathlib import Path
 from typing import List
 import re
 import argparse
+import os
+import json
+from docx import Document as dc
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
@@ -60,62 +65,62 @@ class DocumentProcessor:
             # Default separators for other languages
             return ["\n\n", "\n", " ", ""]
     
-    def _clean_arabic_text(self, text: str) -> str:
-        """Clean Arabic text by handling special characters and normalization."""
-        if self.language.lower() == "arabic":
-            # Remove diacritics (tashkeel)
-            text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
-            
-            # Normalize alef variants to simple alef
-            text = re.sub(r'[إأآا]', 'ا', text)
-            
-            # Normalize yeh variants
-            text = re.sub(r'[يى]', 'ي', text)
-            
-            # Remove tatweel (kashida)
-            text = re.sub(r'\u0640', '', text)
-            
-            # Remove non-Arabic characters except for punctuation and whitespace
-            # text = re.sub(r'[^\u0600-\u06FF\s\.\,\!\?\;\:\(\)]', '', text)
-        
-        return text
+    def extract_cleaned_text_from_docx(self, path: str) -> str:
+        doc = dc(path)
+        text = ""
+
+        def clean_text(text):
+            text = re.sub(r'،+', '،', text)  # Replace multiple Arabic commas with a single one
+            text = re.sub(r'\.+', '.', text)  # Replace multiple periods with a single one
+            text = re.sub(r'_+', '', text)    # Remove sequences of underscores
+            text = re.sub(r'ـ+', '', text)    # Remove Arabic tatweel (elongation character)
+            text = re.sub(r'﴾|﴿', '', text)   # Remove Quranic citation marks
+            text = re.sub(r'[ًٌٍَُِّْٰٓ]', '', text)  # Remove Arabic diacritics
+            text = re.sub(r'\*-\*', '', text)  # Remove '*-*' patterns
+            return text
+
+        for child in doc.element.body.iterchildren():
+            if child.tag.endswith('}p'):
+                para = Paragraph(child, doc)
+                raw_text = para.text.strip()
+                if raw_text:
+                    text += clean_text(raw_text) + "\n\n"
+            elif child.tag.endswith('}tbl'):
+                table = Table(child, doc)
+                for row in table.rows:
+                    row_text = " | ".join([clean_text(cell.text.strip()) for cell in row.cells if cell.text.strip()])
+                    if row_text:
+                        text += row_text + "\n"
+                text += "\n"
+
+        return text.strip()
         
     def process_documents(self) -> None:
         """Process all documents in the raw_data directory."""
-        # Get all PDF files
-        pdf_files = list(self.raw_data_dir.glob("**/*.pdf"))
+        # Get all DOCX files
+        docx_files = list(self.raw_data_dir.glob("**/*.docx"))
         
-        if not pdf_files:
-            logger.warning(f"No PDF files found in {self.raw_data_dir}")
+        if not docx_files:
+            logger.warning(f"No DOCX files found in {self.raw_data_dir}")
             return
             
-        logger.info(f"Found {len(pdf_files)} PDF files to process")
+        logger.info(f"Found {len(docx_files)} DOCX files to process")
         
         # Process each file
-        for pdf_file in pdf_files:
+        for docx_file in docx_files:
             try:
-                self._process_file(pdf_file)
+                self._process_file(docx_file)
             except Exception as e:
-                logger.error(f"Error processing {pdf_file}: {str(e)}")
+                logger.error(f"Error processing {docx_file}: {str(e)}")
                 
     def _process_file(self, file_path: Path) -> None:
-        """Process a single PDF file."""
+        """Process a single DOCX file."""
         logger.info(f"Processing {file_path}")
-        
-        # Load PDF
-        loader = PyPDFLoader(
-            str(file_path),
-            extract_images=False  # Skip image extraction as it might cause issues with Arabic PDFs
-        )
-        pages = loader.load()
-        
-        # Clean text if working with Arabic
-        if self.language.lower() == "arabic":
-            for page in pages:
-                page.page_content = self._clean_arabic_text(page.page_content)
-        
-        # Split into chunks
-        chunks = self.text_splitter.split_documents(pages)
+
+        text = self.extract_cleaned_text_from_docx(file_path)
+
+        text_chunks = self.text_splitter.split_text(text)
+        chunks = [{"id":None, "page_content": chunk, "metadata": {"source": file_path},"type":"Document"} for chunk in text_chunks]
         
         # Add metadata
         chunks = self._add_metadata(chunks, file_path)
@@ -123,34 +128,59 @@ class DocumentProcessor:
         # Save chunks to processed data directory
         self._save_chunks(chunks, file_path)
         
+        for chunk in chunks:
+            if isinstance(chunk, dict):
+                chunk.pop("id", None)
+        
+        clean_chunks = []
+        for chunk in chunks:
+            if isinstance(chunk, dict):
+                clean_chunks.append(Document(**chunk))
+            else:
+                clean_chunks.append(chunk)
+
         # Create or update vector store
-        self._update_vector_store(chunks)
+        self._update_vector_store(clean_chunks)
         
         logger.info(f"Successfully processed {file_path}")
         
     def _add_metadata(self, chunks: List[Document], file_path: Path) -> List[Document]:
         """Add metadata to document chunks."""
         for chunk in chunks:
-            chunk.metadata.update({
+            chunk["metadata"].update({
                 "source": str(file_path),
-                "file_name": file_path.name,
-                "file_type": file_path.suffix,
-                "language": self.language
+                "file_name": file_path.replace(".docx", ""),
+                "file_type": "docx",
+                "language": "arabic",
+                "total_pages":558,
+                "page_label":"1",
+                "page":0 ,
+                "producer":"www.ilovepdf.com",
+                "creator":"Microsoft® Word 2016",
+                "creationdate":"2025-04-03T13:04:52+00:00",
+                "author":"ency-education.com",
+                "moddate":"2025-04-03T13:05:03+00:00" 
             })
         return chunks
         
-    def _save_chunks(self, chunks: List[Document], file_path: Path) -> None:
+    def _save_chunks(self, chunks: List[Document], file_path: str) -> None:
         """Save processed chunks to disk."""
-        # Create output directory structure
-        rel_path = file_path.relative_to(self.raw_data_dir)
-        output_dir = self.processed_data_dir / rel_path.parent
-        output_dir.mkdir(parents=True, exist_ok=True)
+        raw_data_dir_str = str(self.raw_data_dir)
+        if file_path.startswith(raw_data_dir_str):
+            rel_path = os.path.relpath(file_path, raw_data_dir_str)
+        else:
+            rel_path = os.path.basename(file_path)
         
-        # Save chunks
-        output_file = output_dir / f"{file_path.stem}_chunks.json"
+        rel_parent = os.path.dirname(rel_path)
+        output_dir = os.path.join(str(self.processed_data_dir), rel_parent)
+        os.makedirs(output_dir, exist_ok=True)        
+        file_stem = os.path.splitext(os.path.basename(file_path))[0]
+        
+        output_file = os.path.join(output_dir, f"{file_stem}_chunks.json")
+
         with open(output_file, "w", encoding="utf-8") as f:
             for chunk in chunks:
-                f.write(chunk.json() + "\n")
+                f.write(json.dumps(chunk, ensure_ascii=False) + "\n")
                 
     def _update_vector_store(self, chunks: List[Document]) -> None:
         """Update the vector store with new chunks."""
