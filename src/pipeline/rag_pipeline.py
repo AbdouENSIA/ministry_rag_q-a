@@ -18,9 +18,22 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from ..graph.rag_graph import RAGGraph
 from ..state.rag_state import RAGState
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Configure logging with UTF-8 encoding
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('rag_pipeline.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
+
+# Ensure stdout/stderr can handle UTF-8
+import sys
+import codecs
+sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
 
 class RateLimiter:
     """Global rate limiter for API calls."""
@@ -66,7 +79,6 @@ class RAGPipeline:
     ):
         logger.info("="*50)
         logger.info("Initializing RAGPipeline...")
-        logger.info(f"Config: {config}")
         
         self.vector_store = vector_store
         self.llm = llm

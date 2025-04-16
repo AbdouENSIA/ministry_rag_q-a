@@ -1,4 +1,6 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
+import json
+import logging
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import JsonOutputParser
@@ -6,6 +8,8 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from ..state.rag_state import RAGState
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class QueryAnalyzer:
     """Analyzes queries to determine their type, intent, and relevance to the knowledge base."""
@@ -101,6 +105,10 @@ class QueryAnalyzer:
         Returns:
             Updated state with query analysis
         """
+        logger.info("\n" + "="*80)
+        logger.info(f"[QUERY_ANALYZER] Starting analysis of query: '{state['query']}'")
+        logger.info("-"*80)
+        
         # Get query from state
         query = state["query"]
         
@@ -108,9 +116,24 @@ class QueryAnalyzer:
         if self.rate_limiter:
             await self.rate_limiter.wait()
         
+        logger.info("[QUERY_ANALYZER] [LLM CALL] Analyzing query with LLM...")
+        
         # Make sure we pass only the expected parameters to the prompt
+        input_data = {"query": query}
+        logger.info(f"[QUERY_ANALYZER] [LLM INPUT] {json.dumps(input_data, ensure_ascii=False)}")
+        
         chain = self.analysis_prompt | self.llm | self.parser
-        analysis_result = await chain.ainvoke({"query": query})
+        analysis_result = await chain.ainvoke(input_data)
+        
+        logger.info(f"[QUERY_ANALYZER] [LLM OUTPUT] Analysis result: {json.dumps(analysis_result, ensure_ascii=False)}")
+        
+        # Log key insights from analysis
+        logger.info(f"[QUERY_ANALYZER] Query identified as '{analysis_result['query_type']}' type")
+        logger.info(f"[QUERY_ANALYZER] Is related to index: {analysis_result['is_related_to_index']}")
+        logger.info(f"[QUERY_ANALYZER] Query intent: {analysis_result['query_intent']}")
+        logger.info(f"[QUERY_ANALYZER] Analysis confidence: {analysis_result['confidence']}")
+        logger.info(f"[QUERY_ANALYZER] Entities: {', '.join(analysis_result['query_entities'])}")
+        logger.info(f"[QUERY_ANALYZER] Reasoning: {analysis_result['reasoning']}")
         
         # Update state with analysis results
         state.update({
@@ -122,5 +145,8 @@ class QueryAnalyzer:
             "reasoning": analysis_result["reasoning"],
             "current_node": "query_analyzer"
         })
+        
+        logger.info(f"[QUERY_ANALYZER] Analysis completed")
+        logger.info("="*80)
         
         return state 

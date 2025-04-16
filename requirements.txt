@@ -1,42 +1,47 @@
 # Core dependencies
-python-dotenv==1.0.1  # Latest as of Jan 2025 per PyPI
-langchain>=0.3.22  # Latest as of Mar 17, 2025 per PyPI
-langchain-core>=0.3.49  # Latest as of Feb 24, 2025 per PyPI (no newer version found)
-langchain-groq==0.2.0  # Latest as of Mar 18, 2025 per PyPI
-langchain-community>=0.3.20  # Latest as of Mar 18, 2025 per PyPI
-langchain-chroma==0.2.2  # Latest as of Feb 11, 2025 per PyPI
-langgraph>=0.2.34  # No newer version found beyond 0.2.34 as of latest checks
+python-dotenv  # Latest as of Jan 2025 per PyPI
+langchain  # Latest as of Mar 17, 2025 per PyPI
+langchain-core  # Latest as of Feb 24, 2025 per PyPI (no newer version found)
+langchain-google-genai  # Latest as of Mar 18, 2025 per PyPI
+langchain-ollama  # Latest as of Mar 18, 2025 per PyPI
+langchain-community  # Latest as of Mar 18, 2025 per PyPI
+langchain-chroma  # Latest as of Feb 11, 2025 per PyPI
+langgraph  # No newer version found beyond 0.2.34 as of latest checks
 
 # Vector store and embeddings
-chromadb==0.6.3  # Latest as of Jan 14, 2025 per PyPI
-sentence-transformers>=3.2.0  # Latest as of Mar 31, 2025 per PyPI
-langchain-huggingface==0.1.0  # Latest as of Mar 18, 2025 per PyPI
+chromadb  # Latest as of Jan 14, 2025 per PyPI
+sentence-transformers  # Latest as of Mar 31, 2025 per PyPI
+langchain-huggingface  # Latest as of Mar 18, 2025 per PyPI
+rank_bm25  # Latest as of Mar 31, 2025 per PyPI
+
+# Document processing
+python-docx  # Latest as of Apr 11, 2025 per PyPI
 
 # Rich CLI interface
-rich==13.9.2  # Latest as of Mar 31, 2025 per PyPI
+rich  # Latest as of Mar 31, 2025 per PyPI
 
 # HTTP client
-requests>=2.31.0  # Latest as of Mar 31, 2025 per PyPI
+requests  # Latest as of Mar 31, 2025 per PyPI
 
 # Async support
-aiohttp>=3.10.10  # Latest as of Mar 31, 2025 per PyPI
-asyncio>=3.4.3  # Part of Python stdlib, version tied to Python version (3.4.3 is outdated, but kept as per original)
+aiohttp  # Latest as of Mar 31, 2025 per PyPI
+asyncio  # Part of Python stdlib, version tied to Python version
 
 # Web search (optional)
-tavily-python>=0.5.0  # Latest as of Mar 31, 2025 per PyPI
+tavily-python  # Latest as of Mar 31, 2025 per PyPI
 
 # Utilities
-typing-extensions>=4.12.2  # Latest as of Jun 2024 per PyPI (no newer version found)
-pydantic==2.9.2  # Latest as of Mar 31, 2025 per PyPI
+typing-extensions  # Latest as of Jun 2024 per PyPI (no newer version found)
+pydantic  # Latest as of Mar 31, 2025 per PyPI
 
 # Development
-pytest>=8.3.3  # Latest as of Mar 31, 2025 per PyPI
-black>=24.10.0  # Latest as of Oct 2024 per PyPI (no newer version found)
-isort>=5.13.2  # Latest as of Jan 2024 per PyPI (no newer version found)
-mypy>=1.13.0  # Latest as of Mar 31, 2025 per PyPI
+pytest  # Latest as of Mar 31, 2025 per PyPI
+black  # Latest as of Oct 2024 per PyPI (no newer version found)
+isort  # Latest as of Jan 2024 per PyPI (no newer version found)
+mypy  # Latest as of Mar 31, 2025 per PyPI
 
 # Added from the code block
-fastapi==0.115.0  # Latest as of Mar 31, 2025 per PyPI
-uvicorn==0.32.0  # Latest as of Mar 31, 2025 per PyPI
+fastapi  # Latest as of Mar 31, 2025 per PyPI
+uvicorn  # Latest as of Mar 31, 2025 per PyPI
 
-tf_keras==2.18.0  # Latest as of Mar 31, 2025 per PyPI, matches TensorFlow 2.18.0
+tf_keras  # Latest as of Mar 31, 2025 per PyPI, matches TensorFlow 2.18.0

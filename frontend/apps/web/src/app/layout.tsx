@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Cairo } from "next/font/google";
 import React from "react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-const inter = Inter({
-  subsets: ["latin"],
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
   preload: true,
   display: "swap",
+  variable: "--font-cairo",
 });
 
 export const metadata: Metadata = {
-  title: "RAG Chat",
-  description: "واجهة التفاعل مع نظام استرجاع المعرفة المعزز بالذكاء الاصطناعي",
+  title: "وزارة التعليم العالي والبحث العلمي - نظام استرجاع المعرفة",
+  description: "واجهة التفاعل مع نظام استرجاع المعرفة المعزز بالذكاء الاصطناعي لوزارة التعليم العالي والبحث العلمي الجزائرية",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -21,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
-      <body className={inter.className}>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <body className={`${cairo.className} ${cairo.variable} antialiased`}>
         <NuqsAdapter>{children}</NuqsAdapter>
       </body>
     </html>

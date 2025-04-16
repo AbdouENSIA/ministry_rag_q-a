@@ -43,4 +43,4 @@ class RAGState(TypedDict):
     current_node: str
     retry_count: int
     processing_time: float
-    error: Optional[str] 
+    error: Optional[str]

@@ -8,7 +8,6 @@ from langchain_core.vectorstores import VectorStore
 from langgraph.graph import END, StateGraph
 
 from ..nodes.generator import Generator
-from ..nodes.grader import Grader
 from ..nodes.query_analyzer import QueryAnalyzer
 from ..nodes.retriever import Retriever
 from ..nodes.web_searcher import WebSearcher
@@ -60,9 +59,6 @@ class RAGGraph:
             rate_limiter=self.rate_limiter
         )
         
-        logger.info("Initializing Grader...")
-        self.grader = Grader(llm=self.llm, rate_limiter=self.rate_limiter)
-        
         logger.info("Initializing Generator...")
         self.generator = Generator(llm=self.llm, rate_limiter=self.rate_limiter)
         
@@ -85,7 +81,7 @@ class RAGGraph:
         
         The workflow implements:
         1. Query Analysis with routing to either retrieval or web search
-        2. RAG pipeline with document retrieval, grading, and generation
+        2. RAG pipeline with document retrieval and generation
         3. Optimized flow with minimal retries
         
         Returns:
@@ -103,7 +99,6 @@ class RAGGraph:
         logger.info("Adding nodes to graph...")
         self.workflow.add_node("query_analyzer", self.query_analyzer.analyze)
         self.workflow.add_node("retriever", self.retriever.retrieve)
-        self.workflow.add_node("grader", self.grader.grade)
         self.workflow.add_node("generator", self.generator.generate)
         self.workflow.add_node("web_searcher", self.web_searcher.search)
         logger.info("All nodes added successfully")
@@ -125,27 +120,16 @@ class RAGGraph:
             "retriever",
             self.check_retrieval_attempts,
             {
-                "continue": "grader",
+                "continue": "generator",
                 "end": END
             }
         )
         
-        # 3. Document Relevance Check - Direct to generator or end
-        logger.info("Adding document relevance check edges...")
-        self.workflow.add_conditional_edges(
-            "grader",
-            self.check_docs_relevance,
-            {
-                "yes": "generator",  # Docs are relevant
-                "no": END  # End if docs not relevant
-            }
-        )
-        
-        # 4. Web search path
+        # 3. Web search path
         logger.info("Adding web search path edge...")
         self.workflow.add_edge("web_searcher", "generator")
         
-        # 5. Generation - Direct to end
+        # 4. Generation - Direct to end
         logger.info("Adding generation edges...")
         self.workflow.add_conditional_edges(
             "generator",
@@ -181,45 +165,25 @@ class RAGGraph:
         """Execute the graph with the given state and config."""
         if not self.compiled_graph:
             self.compile()
-        # Use ainvoke instead of invoke for async execution
         return await self.compiled_graph.ainvoke(state, config=config or {})
-    
+
     def route_from_analysis(self, state: State) -> str:
-        """Route based on query analysis results."""
-        logger.info("Routing from analysis...")
+        """Route to appropriate node based on query analysis."""
         state = cast(RAGState, state)
-        state["current_node"] = "query_analyzer"
-        
-        if state["is_related_to_index"]:
-            logger.info("Query related to index, routing to retrieval")
-            return "retrieve"
-        elif self.web_searcher.search_client:  # Only use web search if configured
-            logger.info("Query unrelated to index, routing to web search")
+        if state.get("requires_web_search", False):
+            logger.info("Routing to web search based on analysis")
             return "web_search"
-        else:
-            logger.info("Web search not available, falling back to retrieval")
-            return "retrieve"  # Fallback to retrieval if web search not available
-    
+        logger.info("Routing to retrieval based on analysis")
+        return "retrieve"
+
     def check_retrieval_attempts(self, state: State) -> str:
-        """Check if we should continue retrieving or end due to too many attempts."""
-        logger.info("Checking retrieval attempts...")
+        """Check if we should continue with retrieval or end."""
         state = cast(RAGState, state)
-        if state["retry_count"] >= self.max_retrieval_attempts:
-            logger.info(f"Max retrieval attempts ({self.max_retrieval_attempts}) reached")
+        if not state.get("documents"):
+            logger.info("No documents retrieved")
             return "end"
-        logger.info(f"Retrieval attempts ({state['retry_count']}) within limit")
         return "continue"
-    
-    def check_docs_relevance(self, state: State) -> str:
-        """Check if retrieved documents are relevant."""
-        logger.info("Checking document relevance...")
-        state = cast(RAGState, state)
-        if state["docs_relevant"]:
-            logger.info("Documents found to be relevant")
-            return "yes"
-        logger.info("Documents found to be irrelevant")
-        return "no"
-    
+
     def check_generation_quality(self, state: State) -> str:
         """Combined quality check for generation results."""
         state = cast(RAGState, state)

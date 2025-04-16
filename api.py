@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_chroma import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from pydantic import BaseModel, Field
 
@@ -30,15 +31,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize components
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash",
     temperature=0.3,
-    max_tokens=2048,
+    max_tokens=8192,
 )
 
 embeddings = HuggingFaceEmbeddings(
-    model_name="aubmindlab/bert-base-arabertv02"
+    model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 )
 
 # Load vector store
@@ -57,9 +57,9 @@ pipeline = RAGPipeline(
     llm=llm,
     embeddings=embeddings,
     config={
-        "max_retrieval_attempts": 2,  # Reduced from 3 to align with graph settings
-        "max_generation_attempts": 2,  # Reduced from 2 to align with graph settings
-        "min_confidence_score": 0.9,
+        "max_retrieval_attempts": 3,  # Reduced from 3 to align with graph settings
+        "max_generation_attempts": 4,  # Reduced from 2 to align with graph settings
+        "min_confidence_score": 0.5,
         "tavily_api_key": os.getenv("TAVILY_API_KEY"),
         "requests_per_minute": 30
     }
@@ -141,6 +141,13 @@ def format_response(result: Dict[str, Any], include_source_documents: bool = Fal
     metadata = result.get('metadata', {})
     if not isinstance(metadata, dict):
         metadata = {}
+        
+    # Ensure metadata has all required fields
+    metadata = {
+        'sources_used': metadata.get('sources_used', len(result.get('documents', []))),
+        'key_concepts': metadata.get('key_concepts', []),
+        'confidence_factors': metadata.get('confidence_factors', ["Based on available documents"])
+    }
     
     # Process source documents if requested
     source_documents = None
@@ -148,10 +155,24 @@ def format_response(result: Dict[str, Any], include_source_documents: bool = Fal
         # Convert Document objects to dict representation
         source_documents = []
         for doc in result.get('documents', []):
-            # Only include page_content and metadata fields
+            # Process metadata
+            doc_metadata = {}
+            if hasattr(doc, 'metadata'):
+                for key, value in doc.metadata.items():
+                    # Handle serialized JSON fields
+                    if key in ['subsections', 'tables'] and isinstance(value, str):
+                        try:
+                            doc_metadata[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            doc_metadata[key] = value
+                    else:
+                        doc_metadata[key] = value
+            
+            # Create document entry
             source_documents.append({
                 'page_content': doc.page_content if hasattr(doc, 'page_content') else str(doc),
-                'metadata': doc.metadata if hasattr(doc, 'metadata') else {}
+                'metadata': doc_metadata,
+                'score': result.get('retrieval_scores', [0.0])[len(source_documents)] if result.get('retrieval_scores') else 0.0
             })
     
     # Format final response
@@ -163,11 +184,7 @@ def format_response(result: Dict[str, Any], include_source_documents: bool = Fal
         'query_type': result.get('query_type', 'unknown'),
         'query_intent': result.get('query_intent', 'unknown'),
         'processing_time': result.get('processing_time', 0.0),
-        'metadata': {
-            'sources_used': metadata.get('sources_used', 0),
-            'key_concepts': metadata.get('key_concepts', []),
-            'confidence_factors': metadata.get('confidence_factors', [])
-        },
+        'metadata': metadata,
         'suggested_followup': result.get('suggested_followup', []),
         'validation': validation
     }

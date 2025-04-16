@@ -1,4 +1,6 @@
 import asyncio
+import json
+import logging
 from typing import Any, Dict, Optional
 
 from langchain_core.language_models import BaseChatModel
@@ -8,6 +10,8 @@ from tavily import TavilyClient
 
 from ..state.rag_state import RAGState
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class WebSearcher:
     """Performs web searches for queries that need external information."""
@@ -132,7 +136,12 @@ class WebSearcher:
         Returns:
             Updated state with search results
         """
+        logger.info("\n" + "="*80)
+        logger.info(f"[WEB_SEARCHER] Starting web search for query: '{state['query']}'")
+        logger.info("-"*80)
+        
         if not self.search_client:
+            logger.warning("[WEB_SEARCHER] Web search not configured - missing Tavily API key")
             state.update({
                 "error": "Web search not configured - missing Tavily API key",
                 "current_node": "web_searcher"
@@ -143,6 +152,7 @@ class WebSearcher:
         
         try:
             # Run search in executor to avoid blocking
+            logger.info(f"[WEB_SEARCHER] Performing Tavily search for query: '{query}'")
             search_results = await asyncio.get_event_loop().run_in_executor(
                 None, 
                 lambda: self.search_client.search(
@@ -152,14 +162,40 @@ class WebSearcher:
                 )
             )
             
+            # Log search results summary
+            result_count = len(search_results.get("results", []))
+            logger.info(f"[WEB_SEARCHER] Search returned {result_count} results")
+            
+            # Log top search results
+            for i, result in enumerate(search_results.get("results", [])[:3], 1):
+                logger.info(f"[WEB_SEARCHER] Result {i}: {result.get('title', 'No title')} - {result.get('url', 'No URL')}")
+                content_preview = result.get('content', '')[:150] + '...' if len(result.get('content', '')) > 150 else result.get('content', '')
+                logger.info(f"[WEB_SEARCHER] Content preview: {content_preview}")
+            
             # Analyze search results
             if self.rate_limiter:
                 await self.rate_limiter.wait()
-            chain = self.search_prompt | self.llm | self.parser
-            analysis_result = await chain.ainvoke({
+                
+            logger.info("[WEB_SEARCHER] [LLM CALL] Analyzing search results with LLM...")
+            
+            input_data = {
                 "query": query,
                 "search_results": search_results
-            })
+            }
+            logger.info(f"[WEB_SEARCHER] [LLM INPUT] Query: '{query}', Search result count: {result_count}")
+            
+            chain = self.search_prompt | self.llm | self.parser
+            analysis_result = await chain.ainvoke(input_data)
+            
+            logger.info("[WEB_SEARCHER] [LLM OUTPUT] Analysis completed successfully")
+            logger.info(f"[WEB_SEARCHER] Synthesized info length: {len(analysis_result.get('synthesized_info', ''))}")
+            logger.info(f"[WEB_SEARCHER] Key facts: {len(analysis_result.get('key_facts', []))} items")
+            logger.info(f"[WEB_SEARCHER] Sources: {len(analysis_result.get('sources', []))} URLs")
+            logger.info(f"[WEB_SEARCHER] Confidence: {analysis_result.get('confidence', 0)}")
+            
+            # Log synthesized info preview
+            info_preview = analysis_result.get('synthesized_info', '')[:150] + '...' if len(analysis_result.get('synthesized_info', '')) > 150 else analysis_result.get('synthesized_info', '')
+            logger.info(f"[WEB_SEARCHER] Synthesized info preview: {info_preview}")
             
             # Update state with results
             state.update({
@@ -171,10 +207,16 @@ class WebSearcher:
                 "current_node": "web_searcher"
             })
             
+            logger.info("[WEB_SEARCHER] Successfully updated state with search results")
+            
         except Exception as e:
+            logger.error(f"[WEB_SEARCHER] Search failed with error: {str(e)}")
             state.update({
                 "error": f"Web search failed: {str(e)}",
                 "current_node": "web_searcher"
             })
+        
+        logger.info(f"[WEB_SEARCHER] Web search completed")
+        logger.info("="*80)
             
         return state 
