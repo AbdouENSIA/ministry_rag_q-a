@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Generator
 import argparse
+import html
+import unicodedata
 
 from docx import Document
 from docx.table import Table
@@ -51,20 +53,59 @@ class DocumentProcessor:
         Clean Arabic text by:
         - Removing diacritics (تشكيل: Unicode ranges 0617-061A and 064B-0652)
         - Removing tatweel characters (ـ)
+        - Normalizing Arabic letters (replacing various forms of alef, yaa, etc.)
         - Removing unwanted punctuation (keeping Arabic letters, digits and common punctuation)
         - Normalizing whitespace
+        - Handling HTML entities and special characters
         """
         if not text:
             return ""
-            
-        # Remove Arabic diacritics
+        
+        # Handle HTML entities
+        text = html.unescape(text)
+        
+        # Normalize Unicode forms (NFC normalization)
+        text = unicodedata.normalize('NFC', text)
+        
+        # Remove Arabic diacritics (harakat)
         text = re.sub(r'[\u0617-\u061A\u064B-\u0652]', '', text)
-        # Remove tatweel
+        
+        # Remove tatweel (kashida)
         text = re.sub(r'ـ+', '', text)
-        # Remove unwanted symbols but preserve common punctuation (،, ؛, :, ., -, parentheses)
-        text = re.sub(r'[^\u0600-\u06FF\d\s،؛\.\:\-\–\(\)]', '', text)
-        # Normalize whitespace
+        
+        # Normalize Arabic letters
+        replacements = {
+            # Alef variations to regular alef
+            'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ٱ': 'ا',
+            # Yaa variations
+            'ى': 'ي', 'ئ': 'ي',
+            # Hamza variations
+            'ؤ': 'و',
+            # Taa marbuta to haa
+            'ة': 'ه',
+        }
+        for original, replacement in replacements.items():
+            text = text.replace(original, replacement)
+        
+        # Remove unwanted symbols but preserve common punctuation
+        # Keep Arabic letters (\u0600-\u06FF), Persian characters (\u0750-\u077F), 
+        # Arabic presentation forms (\uFB50-\uFDFF), Latin letters, digits, and
+        # common punctuation (،؛.:-–_()[]{}"'、،؛/|)
+        text = re.sub(r'[^\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\w\d\s،؛\.\:\-\–\_\(\)\[\]\{\}\"\'\、\،\؛\/\|]', '', text)
+        
+        # Handle multiple dots/periods and make spacing consistent
+        text = re.sub(r'\.{2,}', '...', text)  # Replace multiple dots with ellipsis
+        
+        # Normalize spaces around punctuation
+        text = re.sub(r'\s*([،؛:.،؛\)\]\}])\s*', r'\1 ', text)  # No space before, one after
+        text = re.sub(r'\s*([\(\[\{])\s*', r' \1', text)  # One space before, none after
+        
+        # Remove zero-width characters and other invisible separators
+        text = re.sub(r'[\u200B-\u200F\u061C\u202A-\u202E\u2066-\u2069]', '', text)
+        
+        # Remove excessive whitespace and normalize
         text = re.sub(r'\s+', ' ', text).strip()
+        
         return text
     
     def iter_block_items(self, parent: Document) -> Generator[Paragraph | Table, None, None]:

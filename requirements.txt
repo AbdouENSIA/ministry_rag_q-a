@@ -2,7 +2,6 @@
 python-dotenv  # Latest as of Jan 2025 per PyPI
 langchain  # Latest as of Mar 17, 2025 per PyPI
 langchain-core  # Latest as of Feb 24, 2025 per PyPI (no newer version found)
-langchain-google-genai  # Latest as of Mar 18, 2025 per PyPI
 langchain-ollama  # Latest as of Mar 18, 2025 per PyPI
 langchain-community  # Latest as of Mar 18, 2025 per PyPI
 langchain-chroma  # Latest as of Feb 11, 2025 per PyPI

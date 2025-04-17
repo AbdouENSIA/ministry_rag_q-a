@@ -1,32 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Thread } from "@/components/thread";
 import { StreamProvider } from "@/providers/Stream";
-import { Toaster } from "sonner";
-import { LoadingPage } from "@/components/ui/loading";
-import { MinistryButton } from "@/components/ui/ministry-button";
-import { MinistryCard } from "@/components/ui/ministry-card";
-import { 
-  ArrowRight, 
-  FileText, 
-  Book, 
-  Bookmark, 
-  Brain, 
-  GraduationCap, 
-  Calendar, 
-  BookOpen,
-  Search,
-  ExternalLink,
-  ChevronLeft
-} from "lucide-react";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { Button } from "@/components/ui/button";
 
 // Array of suggested questions
 const SUGGESTED_QUESTIONS = [
+  "استخرج البرنامج البيداغوجي لنيل شهادة في تخصص تسيير الغابات",
+  "قرار رقم 255 مؤرخ في 25 فيفري 2024",
+  "ماهو محتوى القرار رقم 982",
+  "ماهو أول قرار وزاري مشترك في سنة 2024",
   "متى تأسست وزارة التعليم العالي والبحث العلمي؟",
   "ما هي مهام وزارة التعليم العالي والبحث العلمي؟",
   "كم عدد الجامعات في الجزائر؟",

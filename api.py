@@ -32,8 +32,8 @@ app.add_middleware(
 )
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
-    temperature=0.3,
+    model="gemini-1.5-pro",
+    temperature=0.1,
     max_tokens=8192,
 )
 

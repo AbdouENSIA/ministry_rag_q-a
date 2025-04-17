@@ -110,11 +110,11 @@ export function Thread({ customClassName }: { customClassName?: string }) {
 
   // Array of suggested questions
   const SUGGESTED_QUESTIONS = [
-    "متى تأسست وزارة التعليم العالي والبحث العلمي؟",
-    "ما هي مهام وزارة التعليم العالي والبحث العلمي؟",
-    "كم عدد الجامعات في الجزائر؟",
-    "ما هي شروط القبول في الدكتوراه؟",
-    "كيف يتم التسجيل في الماستر؟"
+    "استخرج البرنامج البيداغوجي لنيل شهادة في تخصص تسيير الغابات",
+    "قرار رقم 255 مؤرخ في 25 فيفري 2024",
+    "ماهو محتوى القرار رقم 982",
+    "ماهو أول قرار وزاري مشترك في سنة 2024",
+    "متى تأسست وزارة التعليم العالي والبحث العلمي؟"
   ];
 
   // Function to get random questions
@@ -376,7 +376,7 @@ export function Thread({ customClassName }: { customClassName?: string }) {
   return (
     <div className="flex h-full w-full overflow-hidden bg-gray-50">
       {/* Sidebar - Reduced width from w-72 to w-60 */}
-      <div className={`bg-white h-full border-l relative transition-all duration-300 ${showSidebar ? 'w-60' : 'w-0 overflow-hidden'}`}>
+      <div className={`bg-white h-full border-l relative transition-all duration-300 ${showSidebar ? 'w-72' : 'w-0 overflow-hidden'}`}>
         <div className="p-3 h-full flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -413,16 +413,17 @@ export function Thread({ customClassName }: { customClassName?: string }) {
             </div>
             
             <div className="border-t border-gray-100 pt-3">
-              <h4 className="text-base font-bold text-gray-600 mb-1.5 text-right">أسئلة مقترحة</h4>
-              <div className="space-y-1.5">
+              <h4 className="text-base font-bold text-gray-600 mb-2 text-right">أسئلة مقترحة</h4>
+              <div className="space-y-2">
                 {randomQuestions.map((question, index) => (
                   <Button 
                     key={index}
                     variant="outline" 
-                    className="w-full justify-end text-right text-xs text-black bg-white py-1.5 h-auto hover:bg-[#0F4C81]/10"
+                    className="w-full justify-end text-right text-sm text-black bg-white py-2 h-auto hover:bg-[#0F4C81]/10 overflow-hidden border border-gray-200 shadow-sm"
                     onClick={() => handleSuggestedQuestionClick(question)}
+                    title={question}
                   >
-                    {question}
+                    <span className="truncate w-full text-right">{question}</span>
                   </Button>
                 ))}
               </div>
@@ -518,7 +519,7 @@ export function Thread({ customClassName }: { customClassName?: string }) {
               footer={
                 <div className="sticky flex flex-col items-center gap-6 bottom-0 px-4 bg-transparent">
                   {!chatStarted && (
-                    <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-lg shadow-sm border px-6">
+                    <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-lg shadow-sm border px-6 w-full max-w-3xl">
                       <div className="flex gap-3 items-center">
                         {/* Keep the Ministry logo in the welcome card */}
                         <div className="relative h-12 w-12 overflow-hidden">
@@ -542,10 +543,11 @@ export function Thread({ customClassName }: { customClassName?: string }) {
                           <Button 
                             key={index}
                             variant="outline" 
-                            className="text-right text-sm text-black bg-white h-auto py-2 hover:bg-[#0F4C81]/10"
+                            className="text-right text-sm text-black bg-white h-auto py-2 hover:bg-[#0F4C81]/10 overflow-hidden"
                             onClick={() => handleSuggestedQuestionClick(question)}
+                            title={question}
                           >
-                            {question}
+                            <span className="truncate w-full text-right">{question}</span>
                           </Button>
                         ))}
                       </div>

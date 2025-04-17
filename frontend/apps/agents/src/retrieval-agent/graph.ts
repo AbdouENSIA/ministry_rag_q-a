@@ -76,8 +76,54 @@ async function respond(
     ...state.messages,
   ];
   const response = await model.invoke(messageValue);
+  
+  // Ensure response is properly formatted as Markdown
+  let content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+  
+  // If content doesn't contain any Markdown formatting, add some basic structure
+  if (!containsMarkdownFormatting(content)) {
+    content = formatAsMarkdown(content);
+    // Update the response content
+    if (typeof response.content === 'string') {
+      response.content = content;
+    }
+  }
+  
   // We return a list, because this will get added to the existing list
   return { messages: [response] };
+}
+
+/**
+ * Checks if the text contains basic Markdown formatting
+ */
+function containsMarkdownFormatting(text: string): boolean {
+  // Check for common Markdown elements like headings, lists, code blocks, etc.
+  const markdownPatterns = [
+    /#{1,6}\s+.+/,         // Headings
+    /(?:\*|-|\+)\s+.+/,    // Unordered lists
+    /\d+\.\s+.+/,          // Ordered lists
+    /```[\s\S]*?```/,      // Code blocks
+    /`[^`]+`/,             // Inline code
+    /\*\*[^*]+\*\*/,       // Bold
+    /\*[^*]+\*/,           // Italic
+    /\[[^\]]+\]\([^)]+\)/, // Links
+  ];
+  
+  return markdownPatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * Formats plain text as Markdown with basic structure
+ */
+function formatAsMarkdown(text: string): string {
+  // If text is already in paragraphs, return as is
+  if (text.includes('\n\n')) {
+    return text;
+  }
+
+  // Convert plain text to paragraphs for better readability
+  const paragraphs = text.split(/\n/).filter(line => line.trim().length > 0);
+  return paragraphs.join('\n\n');
 }
 
 // Lay out the nodes and edges to define a graph
