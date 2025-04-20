@@ -12,6 +12,7 @@ from langchain_chroma import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import ChatOllama
 from pydantic import BaseModel, Field
 
 from src.pipeline.rag_pipeline import RAGPipeline
@@ -34,7 +35,6 @@ app.add_middleware(
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-pro",
     temperature=0.1,
-    max_tokens=8192,
 )
 
 embeddings = HuggingFaceEmbeddings(

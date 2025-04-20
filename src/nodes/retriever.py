@@ -4,6 +4,9 @@ import logging
 from dataclasses import dataclass
 import json
 import math
+from collections import Counter, defaultdict
+import html
+import unicodedata
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
@@ -16,6 +19,133 @@ from ..state.rag_state import RAGState
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class BM25:
+    """BM25 scoring implementation for document ranking."""
+    
+    def __init__(self, k1: float = 1.5, b: float = 0.75):
+        """
+        Initialize BM25 with parameters.
+        
+        Args:
+            k1: Term frequency saturation parameter
+            b: Length normalization parameter
+        """
+        self.k1 = k1
+        self.b = b
+        self.doc_freqs = defaultdict(int)  # df
+        self.doc_lens = []  # document lengths
+        self.avg_doc_len = 0  # average document length
+        self.total_docs = 0  # N (total number of documents)
+        self.doc_vectors = []  # term frequencies for each document
+        self.vocabulary = set()  # all terms
+        
+    def _tokenize(self, text: str) -> List[str]:
+        """
+        Tokenize text into terms.
+        Enhanced to handle Arabic text better.
+        """
+        # Remove common Arabic diacritics
+        text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
+        
+        # Split on whitespace and punctuation
+        tokens = re.findall(r'\b\w+\b', text.lower())
+        
+        # Filter out very short tokens and common Arabic stop words
+        arabic_stopwords = {"من", "في", "على", "و", "أو", "ثم", "أن", "إلى", "عن", "مع"}
+        return [token for token in tokens if len(token) > 2 and token not in arabic_stopwords]
+        
+    def fit(self, documents: List[Document]):
+        """
+        Fit BM25 parameters on a corpus of documents.
+        
+        Args:
+            documents: List of documents to fit on
+        """
+        self.doc_vectors = []
+        self.doc_freqs.clear()
+        self.vocabulary.clear()
+        self.doc_lens = []
+        
+        # Process each document
+        for doc in documents:
+            terms = self._tokenize(doc.page_content)
+            term_freq = Counter(terms)
+            
+            # Update document frequencies
+            for term in set(terms):
+                self.doc_freqs[term] += 1
+                self.vocabulary.add(term)
+                
+            self.doc_vectors.append(term_freq)
+            self.doc_lens.append(len(terms))
+            
+        self.total_docs = len(documents)
+        self.avg_doc_len = sum(self.doc_lens) / self.total_docs if self.total_docs > 0 else 0
+        
+    def _score_document(self, query_terms: List[str], doc_idx: int) -> float:
+        """
+        Calculate BM25 score for a single document.
+        
+        Args:
+            query_terms: List of query terms
+            doc_idx: Index of document to score
+            
+        Returns:
+            BM25 score
+        """
+        score = 0.0
+        doc_len = self.doc_lens[doc_idx]
+        doc_vector = self.doc_vectors[doc_idx]
+        
+        for term in set(query_terms):  # Use set to count each term once
+            if term not in self.vocabulary:
+                continue
+                
+            # Calculate IDF
+            n_docs_with_term = self.doc_freqs[term]
+            idf = math.log((self.total_docs - n_docs_with_term + 0.5) / 
+                          (n_docs_with_term + 0.5) + 1.0)
+            
+            # Get term frequency in document
+            tf = doc_vector[term]
+            
+            # Calculate normalized term frequency
+            numerator = tf * (self.k1 + 1)
+            denominator = tf + self.k1 * (1 - self.b + self.b * doc_len / self.avg_doc_len)
+            
+            score += idf * numerator / denominator
+            
+        return score
+        
+    def get_scores(self, query: str, documents: List[Document]) -> List[float]:
+        """
+        Get BM25 scores for a query against all documents.
+        
+        Args:
+            query: Query string
+            documents: List of documents to score against
+            
+        Returns:
+            List of scores corresponding to documents
+        """
+        # Fit on documents if not already fit
+        if not self.doc_vectors:
+            self.fit(documents)
+            
+        query_terms = self._tokenize(query)
+        scores = []
+        
+        for doc_idx in range(len(documents)):
+            score = self._score_document(query_terms, doc_idx)
+            scores.append(score)
+            
+        # Normalize scores to [0,1] range
+        max_score = max(scores) if scores else 1
+        if max_score > 0:
+            scores = [score / max_score for score in scores]
+            
+        return scores
 
 @dataclass
 class MetadataFilters:
@@ -46,6 +176,9 @@ class Retriever:
         self.default_k = config.get("default_k", 5)
         self.max_k = config.get("max_k", 10)
         self.min_score = config.get("min_score", 0.5)
+        
+        # Initialize BM25 scorer
+        self.bm25 = BM25()
         
         # Initialize query rewriting prompt
         self.rewrite_prompt = ChatPromptTemplate.from_messages([
@@ -128,6 +261,66 @@ class Retriever:
             ("user", "{query}")
         ])
         
+    def clean_text(self, text: str) -> str:
+        """
+        Clean Arabic text by:
+        - Removing diacritics (تشكيل: Unicode ranges 0617-061A and 064B-0652)
+        - Removing tatweel characters (ـ)
+        - Normalizing Arabic letters (replacing various forms of alef, yaa, etc.)
+        - Removing unwanted punctuation (keeping Arabic letters, digits and common punctuation)
+        - Normalizing whitespace
+        - Handling HTML entities and special characters
+        """
+        if not text:
+            return ""
+        
+        # Handle HTML entities
+        text = html.unescape(text)
+        
+        # Normalize Unicode forms (NFC normalization)
+        text = unicodedata.normalize('NFC', text)
+        
+        # Remove Arabic diacritics (harakat)
+        text = re.sub(r'[\u0617-\u061A\u064B-\u0652]', '', text)
+        
+        # Remove tatweel (kashida)
+        text = re.sub(r'ـ+', '', text)
+        
+        # Normalize Arabic letters
+        replacements = {
+            # Alef variations to regular alef
+            'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ٱ': 'ا',
+            # Yaa variations
+            'ى': 'ي', 'ئ': 'ي',
+            # Hamza variations
+            'ؤ': 'و',
+            # Taa marbuta to haa
+            'ة': 'ه',
+        }
+        for original, replacement in replacements.items():
+            text = text.replace(original, replacement)
+        
+        # Remove unwanted symbols but preserve common punctuation
+        # Keep Arabic letters (\u0600-\u06FF), Persian characters (\u0750-\u077F), 
+        # Arabic presentation forms (\uFB50-\uFDFF), Latin letters, digits, and
+        # common punctuation (،؛.:-–_()[]{}"'、،؛/|)
+        text = re.sub(r'[^\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\w\d\s،؛\.\:\-\–\_\(\)\[\]\{\}\"\'\、\،\؛\/\|]', '', text)
+        
+        # Handle multiple dots/periods and make spacing consistent
+        text = re.sub(r'\.{2,}', '...', text)  # Replace multiple dots with ellipsis
+        
+        # Normalize spaces around punctuation
+        text = re.sub(r'\s*([،؛:.،؛\)\]\}])\s*', r'\1 ', text)  # No space before, one after
+        text = re.sub(r'\s*([\(\[\{])\s*', r' \1', text)  # One space before, none after
+        
+        # Remove zero-width characters and other invisible separators
+        text = re.sub(r'[\u200B-\u200F\u061C\u202A-\u202E\u2066-\u2069]', '', text)
+        
+        # Remove excessive whitespace and normalize
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
+
     def _extract_metadata_filters(self, query: str) -> MetadataFilters:
         """Extract metadata filters from query."""
         filters = MetadataFilters()
@@ -262,8 +455,13 @@ class Retriever:
         chain = self.rewrite_prompt | self.llm
         result = await chain.ainvoke(input_data)
         
-        logger.info(f"[RETRIEVER] [LLM OUTPUT] Query rewriting result: {result.content}")
-        return result.content
+        # Clean and normalize the rewritten query using the same function as document processing
+        rewritten_query = self.clean_text(result.content)
+        
+        logger.info(f"[RETRIEVER] [LLM OUTPUT] Original rewritten query: {result.content}")
+        logger.info(f"[RETRIEVER] [LLM OUTPUT] Normalized rewritten query: {rewritten_query}")
+        
+        return rewritten_query
         
     async def _search_articles_and_appendices(self, query: str) -> Tuple[List[Document], List[float]]:
         """
@@ -884,7 +1082,7 @@ class Retriever:
         
     async def _sparse_retrieval(self, query: str, filters: MetadataFilters) -> Tuple[List[Document], List[float]]:
         """
-        Perform sparse retrieval using keyword matching and metadata filters.
+        Perform sparse retrieval using BM25 scoring and metadata filters.
         
         Args:
             query: Query string
@@ -893,9 +1091,62 @@ class Retriever:
         Returns:
             Tuple of (documents, scores)
         """
-        # For now, fallback to dense retrieval until proper sparse retrieval is implemented
-        logger.info("[RETRIEVER] Using dense retrieval as fallback for sparse retrieval")
-        return await self._dense_retrieval(query, filters)
+        logger.info(f"[RETRIEVER] Performing sparse (BM25) retrieval for query: '{query}'")
+        
+        # Get initial document pool from vector store
+        results = self.vector_store.similarity_search_with_score(
+            query,
+            k=self.max_k * 3  # Get more documents for BM25 reranking
+        )
+        
+        if not results:
+            logger.info("[RETRIEVER] No initial documents found for BM25 scoring")
+            return [], []
+            
+        docs, _ = zip(*results)
+        docs = list(docs)
+        
+        # Apply metadata filters
+        if filters.decision_number or filters.year or filters.chunk_type or filters.official_bulletin:
+            filtered_docs = []
+            for doc in docs:
+                if (not filters.decision_number or 
+                    filters.decision_number == doc.metadata.get('decision_number')):
+                    if (not filters.year or 
+                        filters.year == doc.metadata.get('year')):
+                        if (not filters.chunk_type or 
+                            filters.chunk_type == doc.metadata.get('chunk_type')):
+                            if (not filters.official_bulletin or 
+                                filters.official_bulletin == doc.metadata.get('official_bulletin')):
+                                filtered_docs.append(doc)
+            docs = filtered_docs
+            
+        if not docs:
+            logger.info("[RETRIEVER] No documents found after applying metadata filters")
+            return [], []
+            
+        # Calculate BM25 scores
+        logger.info(f"[RETRIEVER] Calculating BM25 scores for {len(docs)} documents")
+        bm25_scores = self.bm25.get_scores(query, docs)
+        
+        # Create document-score pairs and sort by score
+        doc_scores = list(zip(docs, bm25_scores))
+        doc_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        # Filter by minimum score and limit results
+        filtered_results = [
+            (doc, score) for doc, score in doc_scores 
+            if score >= self.min_score
+        ][:self.default_k]
+        
+        if not filtered_results:
+            logger.info("[RETRIEVER] No documents found after BM25 scoring and filtering")
+            return [], []
+            
+        logger.info(f"[RETRIEVER] Returning {len(filtered_results)} documents from BM25 retrieval")
+        
+        docs, scores = zip(*filtered_results)
+        return list(docs), list(scores)
         
     def _merge_results(
         self,
@@ -904,27 +1155,30 @@ class Retriever:
         sparse_docs: List[Document],
         sparse_scores: List[float]
     ) -> Tuple[List[Document], List[float]]:
-        """Merge results from different retrieval strategies using reciprocal rank fusion."""
+        """
+        Merge results from different retrieval strategies using reciprocal rank fusion
+        with enhanced weighting for BM25 scores.
+        """
         # Create a map to track best scores for each document
         doc_scores = {}
         
-        # Process dense results with higher weight (0.7)
+        # Process dense results with adjusted weight (0.6)
         for doc, score in zip(dense_docs, dense_scores):
             doc_key = doc.page_content
             doc_scores[doc_key] = {
                 'doc': doc,
-                'score': 0.7 * score
+                'score': 0.6 * score  # Reduced from 0.7 to give more weight to BM25
             }
             
-        # Process sparse results with lower weight (0.3)
+        # Process sparse (BM25) results with increased weight (0.4)
         for doc, score in zip(sparse_docs, sparse_scores):
             doc_key = doc.page_content
             if doc_key in doc_scores:
-                doc_scores[doc_key]['score'] += 0.3 * score
+                doc_scores[doc_key]['score'] += 0.4 * score  # Increased from 0.3
             else:
                 doc_scores[doc_key] = {
                     'doc': doc,
-                    'score': 0.3 * score
+                    'score': 0.4 * score
                 }
             
         # Sort by combined score and split back into docs and scores
